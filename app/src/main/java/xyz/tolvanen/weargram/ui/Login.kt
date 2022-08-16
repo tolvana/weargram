@@ -31,14 +31,12 @@ import com.google.zxing.qrcode.encoder.Encoder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import xyz.tolvanen.weargram.Authorization
-import xyz.tolvanen.weargram.TelegramClient
+import xyz.tolvanen.weargram.client.Authenticator
+import xyz.tolvanen.weargram.client.Authorization
 import javax.inject.Inject
-import kotlin.math.roundToInt
 
 @Composable
 fun LoginScreen(viewModel: LoginViewModel, loggedIn: () -> Unit) {
-    Log.d("kek", "heddre")
 
     val loginState by viewModel.loginState
     val loginLink by viewModel.loginLink
@@ -62,14 +60,14 @@ fun LoginScreen(viewModel: LoginViewModel, loggedIn: () -> Unit) {
 }
 
 @HiltViewModel
-class LoginViewModel @Inject constructor(private val telegramClient: TelegramClient) : ViewModel() {
+class LoginViewModel @Inject constructor(private val authenticator: Authenticator) : ViewModel() {
 
     val loginState = mutableStateOf<LoginState>(LoginState.SetNumber())
 
     val loginLink = mutableStateOf<String?>(null)
 
     init {
-        telegramClient.authorizationState.onEach {
+        authenticator.authorizationState.onEach {
             Log.d("kek", "here with $it")
             when (it) {
                 Authorization.UNAUTHORIZED -> {
@@ -90,7 +88,7 @@ class LoginViewModel @Inject constructor(private val telegramClient: TelegramCli
             }
         }.launchIn(viewModelScope)
 
-        telegramClient.linkState.onEach {
+        authenticator.tokenState.onEach {
             it?.also {
                 loginLink.value = it
             }
@@ -100,17 +98,17 @@ class LoginViewModel @Inject constructor(private val telegramClient: TelegramCli
     }
 
     fun setNumber(number: String) {
-        telegramClient.setPhoneNumber(number)
+        authenticator.setPhoneNumber(number)
         loginState.value = LoginState.Loading
     }
 
     fun setCode(code: String) {
-        telegramClient.setCode(code)
+        authenticator.setCode(code)
         loginState.value = LoginState.Loading
     }
 
     fun setPassword(password: String) {
-        telegramClient.setPassword(password)
+        authenticator.setPassword(password)
         loginState.value = LoginState.Loading
     }
 
@@ -133,8 +131,9 @@ fun PhoneNumberScreen(loginLink: String?, onEntry: (String) -> Unit) {
                         i,
                         j,
                         (if (mat[(i * mat.width / size),
-                                 (j * mat.height / size)]
-                            != 0.toByte())
+                                    (j * mat.height / size)]
+                            != 0.toByte()
+                        )
                             Color.BLACK
                         else Color.WHITE)
                     )
@@ -148,7 +147,9 @@ fun PhoneNumberScreen(loginLink: String?, onEntry: (String) -> Unit) {
                 Image(
                     ColorPainter(androidx.compose.ui.graphics.Color.White),
                     null,
-                    modifier = Modifier.fillMaxWidth().fillMaxHeight()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight()
                 )
                 Image(
                     bmp.asImageBitmap(), "Scan this QR Code with a logged in Telegram client",

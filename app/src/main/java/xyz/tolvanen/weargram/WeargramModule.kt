@@ -9,6 +9,9 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 
 import org.drinkless.td.libcore.telegram.TdApi
+import xyz.tolvanen.weargram.client.Authenticator
+import xyz.tolvanen.weargram.client.ChatProvider
+import xyz.tolvanen.weargram.client.TelegramClient
 import java.util.*
 import javax.inject.Singleton
 
@@ -35,4 +38,13 @@ object WeargramModule {
     @Singleton
     @Provides
     fun provideTelegramClient(parameters: TdApi.TdlibParameters) = TelegramClient(parameters)
+
+    @Singleton
+    @Provides
+    fun provideAuthenticator(telegramClient: TelegramClient) = Authenticator(telegramClient)
+
+    @Singleton
+    @Provides
+    fun provideChatProvider(telegramClient: TelegramClient) = ChatProvider(telegramClient)
+
 }

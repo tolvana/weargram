@@ -1,5 +1,6 @@
 package xyz.tolvanen.weargram.ui
 
+import android.util.Log
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.*
@@ -11,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -21,29 +23,31 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.drinkless.td.libcore.telegram.TdApi
-import xyz.tolvanen.weargram.Authorization
 import xyz.tolvanen.weargram.Screen
-import xyz.tolvanen.weargram.TelegramClient
+import xyz.tolvanen.weargram.client.Authorization
+import xyz.tolvanen.weargram.client.Authenticator
+import xyz.tolvanen.weargram.client.ChatProvider
 import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val telegramClient: TelegramClient
+    private val authenticator: Authenticator,
+    private val chatProvider: ChatProvider
 ) : ViewModel() {
 
     val homeState = mutableStateOf<HomeState>(HomeState.Loading)
-    val chatState = mutableStateOf<List<TdApi.Chat>>(listOf())
     val chatData = MutableLiveData<List<TdApi.Chat>>()
 
-
     init {
-        telegramClient.authorizationState.onEach {
+        Log.d("HomeViewModel", "init")
+        authenticator.authorizationState.onEach {
             when (it) {
                 Authorization.UNAUTHORIZED -> {
                     homeState.value = HomeState.Loading
-                    telegramClient.startAuthorization()
+                    authenticator.startAuthorization()
                 }
                 Authorization.AUTHORIZED -> {
+                    chatProvider.loadChats()
                     homeState.value = HomeState.Ready
                 }
                 else -> {
@@ -54,12 +58,9 @@ class HomeViewModel @Inject constructor(
             }
         }.launchIn(viewModelScope)
 
-        telegramClient.chatFlow.onEach {
-            chatState.value = it
-            chatData.postValue(it)
-            //Log.d("top", "chats: ${it.joinToString { chat -> chat.title }}")
-        }.launchIn(viewModelScope)
-
+        chatProvider.chatFlow
+            .onEach { chatData.postValue(it) }
+            .launchIn(viewModelScope)
     }
 
 }
@@ -93,6 +94,7 @@ fun HomeScaffold(navController: NavController, viewModel: HomeViewModel) {
     val coroutineScope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
     val chats by viewModel.chatData.observeAsState()
+    Log.d("HomeScaffold", "recompose")
 
     Scaffold(
         positionIndicator = {
@@ -101,7 +103,7 @@ fun HomeScaffold(navController: NavController, viewModel: HomeViewModel) {
                 modifier = Modifier
             )
         },
-        vignette = { Vignette(vignettePosition = VignettePosition.TopAndBottom)}
+        vignette = { Vignette(vignettePosition = VignettePosition.TopAndBottom) }
     ) {
         ScalingLazyColumn(
             state = listState,
@@ -118,10 +120,9 @@ fun HomeScaffold(navController: NavController, viewModel: HomeViewModel) {
                 .wrapContentHeight()
         ) {
             chats?.also {
-                items(it) {chat ->
-                    Chip(
-                        modifier = Modifier.wrapContentSize(Alignment.Center),
-                        label = { Text(chat.title) },
+                items(it) { chat ->
+                    ChatItem(
+                        chat,
                         onClick = { navController.navigate(Screen.Chat.buildRoute(chat.id)) }
                     )
                 }
@@ -130,6 +131,32 @@ fun HomeScaffold(navController: NavController, viewModel: HomeViewModel) {
 
         LaunchedEffect(Unit) {
             focusRequester.requestFocus()
+        }
+
+    }
+}
+
+val TdApi.Message.shortDescription: String
+    get() = when (content.constructor) {
+        TdApi.MessageText.CONSTRUCTOR -> (content as TdApi.MessageText).text.text
+        else -> "Unsupported message"
+    }
+
+@Composable
+fun ChatItem(chat: TdApi.Chat, onClick: () -> Unit = {}) {
+    Card(onClick = onClick) {
+        Column() {
+            Text(
+                text = chat.title,
+                maxLines = 1,
+                style = MaterialTheme.typography.body1
+            )
+            Text(
+                text = chat.lastMessage?.shortDescription ?: "Empty history",
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.caption2
+            )
         }
 
     }
