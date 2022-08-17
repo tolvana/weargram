@@ -35,36 +35,12 @@ import xyz.tolvanen.weargram.client.Authenticator
 import xyz.tolvanen.weargram.client.Authorization
 import javax.inject.Inject
 
-@Composable
-fun LoginScreen(viewModel: LoginViewModel, loggedIn: () -> Unit) {
-
-    val loginState by viewModel.loginState
-    val loginLink by viewModel.loginLink
-
-    when (loginState) {
-        is LoginState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
-        is LoginState.SetNumber -> PhoneNumberScreen(loginLink) {
-            viewModel.setNumber(it)
-        }
-        is LoginState.SetCode -> CodeScreen {
-            viewModel.setCode(it)
-        }
-        is LoginState.SetPassword -> PasswordScreen {
-            viewModel.setPassword(it)
-        }
-        is LoginState.Authorized -> loggedIn()
-    }
-
-}
-
 @HiltViewModel
 class LoginViewModel @Inject constructor(private val authenticator: Authenticator) : ViewModel() {
 
     val loginState = mutableStateOf<LoginState>(LoginState.SetNumber())
 
-    val loginLink = mutableStateOf<String?>(null)
+    val qrCode = mutableStateOf<Bitmap?>(null)
 
     init {
         authenticator.authorizationState.onEach {
@@ -89,12 +65,35 @@ class LoginViewModel @Inject constructor(private val authenticator: Authenticato
         }.launchIn(viewModelScope)
 
         authenticator.tokenState.onEach {
-            it?.also {
-                loginLink.value = it
-            }
-
+            it?.also { generateQrCode(it) }
         }.launchIn(viewModelScope)
 
+    }
+
+    private val size = 512f
+    private fun generateQrCode(token: String) {
+        val mat = Encoder.encode(token, ErrorCorrectionLevel.L).matrix
+        val bmpSize = (size * (mat.height + 2) / mat.height).toInt()
+        val offset = (bmpSize - size) / 2
+        val bmp = Bitmap.createBitmap(bmpSize, bmpSize, Bitmap.Config.RGB_565)
+        for (i in 0 until bmpSize) {
+            val iMat = (i - offset) * mat.width / size
+            for (j in 0 until bmpSize) {
+                val jMat = (j - offset) * mat.height / size
+
+                val pixelColor =
+                    (if (iMat >= 0 && iMat < mat.width
+                        && jMat >= 0 && jMat < mat.height
+                        && mat[iMat.toInt(), jMat.toInt()] != 0.toByte()
+                    )
+                        Color.BLACK
+                    else Color.WHITE)
+
+                bmp.setPixel(i, j, pixelColor)
+            }
+        }
+
+        qrCode.value = bmp
     }
 
     fun setNumber(number: String) {
@@ -111,48 +110,52 @@ class LoginViewModel @Inject constructor(private val authenticator: Authenticato
         authenticator.setPassword(password)
         loginState.value = LoginState.Loading
     }
-
 }
 
 @Composable
-fun PhoneNumberScreen(loginLink: String?, onEntry: (String) -> Unit) {
+fun LoginScreen(viewModel: LoginViewModel, loggedIn: () -> Unit) {
+
+    val loginState by viewModel.loginState
+    val qrCode by viewModel.qrCode
+
+    when (loginState) {
+        is LoginState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        is LoginState.SetNumber -> PhoneNumberScreen(qrCode) {
+            viewModel.setNumber(it)
+        }
+        is LoginState.SetCode -> CodeScreen {
+            viewModel.setCode(it)
+        }
+        is LoginState.SetPassword -> PasswordScreen {
+            viewModel.setPassword(it)
+        }
+        is LoginState.Authorized -> loggedIn()
+    }
+}
+
+@Composable
+fun PhoneNumberScreen(qrCode: Bitmap?, onEntry: (String) -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
     )
     {
-        loginLink?.let {
-            //Text(text = loginLink)
-            val size = 512
-            val mat = Encoder.encode(loginLink, ErrorCorrectionLevel.L).matrix
-            val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565)
-            for (i in 0 until size) {
-                for (j in 0 until size) {
-                    bmp.setPixel(
-                        i,
-                        j,
-                        (if (mat[(i * mat.width / size),
-                                    (j * mat.height / size)]
-                            != 0.toByte()
-                        )
-                            Color.BLACK
-                        else Color.WHITE)
-                    )
-                }
-            }
+        qrCode?.let {
             Spacer(modifier = Modifier.height(16.dp))
             Box(
                 modifier = Modifier.fillMaxSize(0.55f),
                 contentAlignment = Alignment.Center
             ) {
+                //Image(
+                //    ColorPainter(androidx.compose.ui.graphics.Color.White),
+                //    null,
+                //    modifier = Modifier
+                //        .fillMaxWidth()
+                //        .fillMaxHeight()
+                //)
                 Image(
-                    ColorPainter(androidx.compose.ui.graphics.Color.White),
-                    null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight()
-                )
-                Image(
-                    bmp.asImageBitmap(), "Scan this QR Code with a logged in Telegram client",
+                    it.asImageBitmap(), "Scan this QR Code with a logged in Telegram client",
                     modifier = Modifier.fillMaxSize(0.95f)
                 )
             }
