@@ -39,6 +39,8 @@ class ChatViewModel @Inject constructor(
     val messageProvider: MessageProvider,
 ) : ViewModel() {
 
+    private val TAG = this::class.simpleName
+
     fun initialize(chatId: Long) {
         messageProvider.initialize(chatId)
         pullMessages()
@@ -52,11 +54,31 @@ class ChatViewModel @Inject constructor(
         return messageProvider.sendMessageAsync(0, 0, TdApi.MessageSendOptions(), content)
     }
 
+    fun onStart(chatId: Long) {
+        client.sendUnscopedRequest(TdApi.OpenChat(chatId))
+    }
+
+    fun onStop(chatId: Long) {
+        client.sendUnscopedRequest(TdApi.CloseChat(chatId))
+    }
+
+    fun updateVisibleItems(visibleItems: List<ScalingLazyListItemInfo>) {
+        messageProvider.updateSeenItems(
+            visibleItems.map { it.key }.filterIsInstance<Long>()
+        )
+    }
+
 }
 
 @Composable
 fun ChatScreen(navController: NavController, chatId: Long, viewModel: ChatViewModel) {
+
     LaunchedEffect(chatId) { viewModel.initialize(chatId) }
+    DisposableEffect(viewModel) {
+        viewModel.onStart(chatId)
+        onDispose { viewModel.onStop(chatId) }
+    }
+
     ChatScaffold(navController, chatId, viewModel)
 }
 
@@ -70,7 +92,13 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
     val listState = rememberScalingLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
-    Log.d("ChatScaffold", "has ${messageIds.size} messages")
+
+    //Log.d("ChatScaffold", "has ${messageIds.size} messages")
+
+    LaunchedEffect(listState.layoutInfo.visibleItemsInfo) {
+        viewModel.updateVisibleItems(listState.layoutInfo.visibleItemsInfo)
+
+    }
 
     //BottomSheetScaffold(sheetContent = {}) {
         Scaffold(
@@ -85,6 +113,7 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
             Column() {
 
                 ScalingLazyColumn(
+                    state = listState,
                     reverseLayout = true,
                     modifier = Modifier
                         .onRotaryScrollEvent {
@@ -120,7 +149,7 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
                             }
                         )
                     }
-                    items(messageIds.toList(), key = { Log.d("lazyList", it.toString()); it }) { id ->
+                    items(messageIds.toList(), key = { it }) { id ->
                         messages[id]?.also { message ->
                             MessageItem(message)
                         }

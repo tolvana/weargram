@@ -79,7 +79,6 @@ class MessageProvider @Inject constructor(
             val messageSource = getMessages(msgId, limit = 10)
             scope.launch {
                 messageSource.collect { messages ->
-                    Log.d(TAG, "got ${messages.size} messages")
                     _messageData.value = _messageData.value.putAll(messages.associateBy { message -> message.id })
                     _messageIds.value = _messageIds.value.addAll(messages.map { message -> message.id })
 
@@ -124,5 +123,13 @@ class MessageProvider @Inject constructor(
             }
         }
         return result
+    }
+
+    fun updateSeenItems(items: List<Long>) {
+        client.sendUnscopedRequest(TdApi.ViewMessages(
+            chatId,
+            0,
+            items.toLongArray(),
+            false))
     }
 }

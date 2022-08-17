@@ -39,7 +39,6 @@ class HomeViewModel @Inject constructor(
     val chatData = MutableLiveData<List<TdApi.Chat>>()
 
     init {
-        Log.d("HomeViewModel", "init")
         authenticator.authorizationState.onEach {
             when (it) {
                 Authorization.UNAUTHORIZED -> {
@@ -94,7 +93,6 @@ fun HomeScaffold(navController: NavController, viewModel: HomeViewModel) {
     val coroutineScope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
     val chats by viewModel.chatData.observeAsState()
-    Log.d("HomeScaffold", "recompose")
 
     Scaffold(
         positionIndicator = {

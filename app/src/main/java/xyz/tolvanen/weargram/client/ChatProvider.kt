@@ -21,9 +21,9 @@ class ChatProvider @Inject constructor(private val client: TelegramClient) {
 
     // remove of ConcurrentSkipListSet didn't work as expected. Instead, synchronize
     // access to non-threadsafe SortedSet with a ReentrantLock
-    val chatOrdering =
+    private val chatOrdering =
         sortedSetOf<Pair<Long, Long>>(comparator = { a, b -> if (a.second < b.second) 1 else -1 })
-    val chatOrderingLock = ReentrantLock()
+    private val chatOrderingLock = ReentrantLock()
 
     private val _chatFlow = MutableSharedFlow<List<TdApi.Chat>>()
     val chatFlow: SharedFlow<List<TdApi.Chat>> get() = _chatFlow
@@ -31,8 +31,6 @@ class ChatProvider @Inject constructor(private val client: TelegramClient) {
     private val scope = CoroutineScope(Dispatchers.Default)
 
     init {
-
-        Log.d(TAG, "init")
 
         client.updateFlow.onEach {
             when (it) {
