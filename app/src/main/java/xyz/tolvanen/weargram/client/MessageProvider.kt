@@ -20,9 +20,9 @@ class MessageProvider @Inject constructor(
     private val lastQueriedMessageId = AtomicLong(-1)
 
     private val _messageIds = MutableStateFlow(persistentListOf<Long>())
-    private val _messageData = MutableStateFlow(persistentHashMapOf<Long, TdApi.Message>())
-
     val messageIds: StateFlow<PersistentList<Long>> get() = _messageIds
+
+    private val _messageData = MutableStateFlow(persistentHashMapOf<Long, TdApi.Message>())
     val messageData: StateFlow<PersistentMap<Long, TdApi.Message>> get() = _messageData
 
     private val scope = CoroutineScope(Dispatchers.Default)

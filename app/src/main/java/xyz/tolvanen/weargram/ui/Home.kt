@@ -5,7 +5,6 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -24,19 +23,18 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.drinkless.td.libcore.telegram.TdApi
 import xyz.tolvanen.weargram.Screen
-import xyz.tolvanen.weargram.client.Authorization
 import xyz.tolvanen.weargram.client.Authenticator
+import xyz.tolvanen.weargram.client.Authorization
 import xyz.tolvanen.weargram.client.ChatProvider
 import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val authenticator: Authenticator,
-    private val chatProvider: ChatProvider
+    val chatProvider: ChatProvider
 ) : ViewModel() {
 
     val homeState = mutableStateOf<HomeState>(HomeState.Loading)
-    val chatData = MutableLiveData<List<TdApi.Chat>>()
 
     init {
         authenticator.authorizationState.onEach {
@@ -57,9 +55,6 @@ class HomeViewModel @Inject constructor(
             }
         }.launchIn(viewModelScope)
 
-        chatProvider.chatFlow
-            .onEach { chatData.postValue(it) }
-            .launchIn(viewModelScope)
     }
 
 }
@@ -92,7 +87,11 @@ fun HomeScaffold(navController: NavController, viewModel: HomeViewModel) {
     val listState = rememberScalingLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
-    val chats by viewModel.chatData.observeAsState()
+    val chats by viewModel.chatProvider.chatIds.collectAsState()
+    val chatData by viewModel.chatProvider.chatData.collectAsState()
+
+    Log.d("HomeScaffold", "chats: " + chats?.size.toString())
+    Log.d("HomeScaffold", "chatData: " + chatData.size.toString())
 
     Scaffold(
         positionIndicator = {
@@ -117,11 +116,11 @@ fun HomeScaffold(navController: NavController, viewModel: HomeViewModel) {
                 .focusable()
                 .wrapContentHeight()
         ) {
-            chats?.also {
-                items(it) { chat ->
+            items(chats) { chatId ->
+                chatData[chatId]?.let { chat ->
                     ChatItem(
                         chat,
-                        onClick = { navController.navigate(Screen.Chat.buildRoute(chat.id)) }
+                        onClick = { navController.navigate(Screen.Chat.buildRoute(chatId)) }
                     )
                 }
             }
@@ -143,19 +142,37 @@ val TdApi.Message.shortDescription: String
 @Composable
 fun ChatItem(chat: TdApi.Chat, onClick: () -> Unit = {}) {
     Card(onClick = onClick) {
-        Column() {
-            Text(
-                text = chat.title,
-                maxLines = 1,
-                style = MaterialTheme.typography.body1
-            )
-            Text(
-                text = chat.lastMessage?.shortDescription ?: "Empty history",
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.caption2
-            )
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = chat.title,
+                    maxLines = 1,
+                    style = MaterialTheme.typography.body1
+                )
+                Text(
+                    text = chat.lastMessage?.shortDescription ?: "Empty history",
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.caption2
+                )
+            }
+
+            if (chat.unreadCount > 0) {
+                CompactButton(
+                    onClick = { /*TODO*/ },
+                    modifier = Modifier.weight(1f, false)
+                ) {
+                    Text(text = (if (chat.unreadCount < 100) chat.unreadCount.toString() else "99+"))
+                }
+
+            }
+
         }
+
 
     }
 }

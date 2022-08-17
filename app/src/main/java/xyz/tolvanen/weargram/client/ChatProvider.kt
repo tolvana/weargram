@@ -1,10 +1,12 @@
 package xyz.tolvanen.weargram.client
 
 import android.util.Log
+import kotlinx.collections.immutable.PersistentMap
+import kotlinx.collections.immutable.persistentHashMapOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -17,7 +19,6 @@ import kotlin.concurrent.withLock
 class ChatProvider @Inject constructor(private val client: TelegramClient) {
 
     private val TAG = this::class.simpleName
-    val chats = ConcurrentHashMap<Long, TdApi.Chat>()
 
     // remove of ConcurrentSkipListSet didn't work as expected. Instead, synchronize
     // access to non-threadsafe SortedSet with a ReentrantLock
@@ -25,81 +26,126 @@ class ChatProvider @Inject constructor(private val client: TelegramClient) {
         sortedSetOf<Pair<Long, Long>>(comparator = { a, b -> if (a.second < b.second) 1 else -1 })
     private val chatOrderingLock = ReentrantLock()
 
-    private val _chatFlow = MutableSharedFlow<List<TdApi.Chat>>()
-    val chatFlow: SharedFlow<List<TdApi.Chat>> get() = _chatFlow
+    private val _chatIds = MutableStateFlow(listOf<Long>())
+    val chatIds: StateFlow<List<Long>> get() = _chatIds
+
+    private val _chatData = MutableStateFlow(persistentHashMapOf<Long, TdApi.Chat>())
+    val chatData: StateFlow<PersistentMap<Long, TdApi.Chat>> get() = _chatData
 
     private val scope = CoroutineScope(Dispatchers.Default)
+
+    private fun updateProperty(chatId: Long, update: (TdApi.Chat) -> TdApi.Chat) {
+        _chatData.value[chatId]?.also {
+            _chatData.value = _chatData.value.remove(chatId)
+            _chatData.value = _chatData.value.put(chatId, update(it))
+        }
+    }
 
     init {
 
         client.updateFlow.onEach {
+            Log.d(TAG, it.toString())
             when (it) {
                 is TdApi.UpdateChatPosition -> {
                     updateChatPositions(it.chatId, arrayOf(it.position))
                 }
                 is TdApi.UpdateChatLastMessage -> {
-                    chats[it.chatId]?.lastMessage = it.lastMessage
+
+                    updateProperty(it.chatId) { chat ->
+                        chat.apply { lastMessage = it.lastMessage }
+                    }
+
                     updateChatPositions(it.chatId, it.positions)
                 }
                 is TdApi.UpdateChatTitle -> {
-                    chats[it.chatId]?.title = it.title
+                    updateProperty(it.chatId) { chat ->
+                        chat.apply { title = it.title }
+                    }
                     updateChats()
                 }
                 is TdApi.UpdateNewChat -> {
-                    chats[it.chat.id] = it.chat
+                    _chatData.value = _chatData.value.put(it.chat.id, it.chat)
                     updateChatPositions(it.chat.id, it.chat.positions)
                 }
                 is TdApi.UpdateChatReadInbox -> {
-                    chats[it.chatId]?.lastReadInboxMessageId = it.lastReadInboxMessageId
-                    chats[it.chatId]?.unreadCount = it.unreadCount
+                    updateProperty(it.chatId) { chat ->
+                        chat.apply {
+                            lastReadInboxMessageId = it.lastReadInboxMessageId
+                            unreadCount = it.unreadCount
+                        }
+                    }
                     updateChats()
                 }
                 is TdApi.UpdateChatReadOutbox -> {
-                    chats[it.chatId]?.lastReadInboxMessageId = it.lastReadOutboxMessageId
+                    updateProperty(it.chatId) { chat ->
+                        chat.apply { lastReadOutboxMessageId = it.lastReadOutboxMessageId }
+                    }
                     updateChats()
                 }
                 is TdApi.UpdateChatPhoto -> {
-                    chats[it.chatId]?.photo = it.photo
+                    updateProperty(it.chatId) { chat ->
+                        chat.apply { photo = it.photo }
+                    }
                     updateChats()
                 }
                 is TdApi.UpdateChatUnreadMentionCount -> {
-                    chats[it.chatId]?.unreadMentionCount = it.unreadMentionCount
+                    updateProperty(it.chatId) { chat ->
+                        chat.apply { unreadMentionCount = it.unreadMentionCount }
+                    }
                     updateChats()
                 }
                 is TdApi.UpdateMessageMentionRead -> {
-                    chats[it.chatId]?.unreadMentionCount = it.unreadMentionCount
+                    updateProperty(it.chatId) { chat ->
+                        chat.apply { unreadMentionCount = it.unreadMentionCount }
+                    }
                     updateChats()
                 }
                 is TdApi.UpdateChatReplyMarkup -> {
-                    chats[it.chatId]?.replyMarkupMessageId = it.replyMarkupMessageId
+                    updateProperty(it.chatId) { chat ->
+                        chat.apply { replyMarkupMessageId = it.replyMarkupMessageId }
+                    }
                     updateChats()
                 }
                 is TdApi.UpdateChatDraftMessage -> {
-                    chats[it.chatId]?.draftMessage = it.draftMessage
+                    updateProperty(it.chatId) { chat ->
+                        chat.apply { draftMessage = it.draftMessage }
+                    }
                     updateChatPositions(it.chatId, it.positions)
                 }
                 is TdApi.UpdateChatPermissions -> {
-                    chats[it.chatId]?.permissions = it.permissions
+                    updateProperty(it.chatId) { chat ->
+                        chat.apply { permissions = it.permissions }
+                    }
                     updateChats()
                 }
                 is TdApi.UpdateChatNotificationSettings -> {
-                    chats[it.chatId]?.notificationSettings = it.notificationSettings
+                    updateProperty(it.chatId) { chat ->
+                        chat.apply { notificationSettings = it.notificationSettings }
+                    }
                     updateChats()
                 }
                 is TdApi.UpdateChatDefaultDisableNotification -> {
-                    chats[it.chatId]?.defaultDisableNotification = it.defaultDisableNotification
+                    updateProperty(it.chatId) { chat ->
+                        chat.apply { defaultDisableNotification = it.defaultDisableNotification }
+                    }
                     updateChats()
                 }
                 is TdApi.UpdateChatIsMarkedAsUnread -> {
-                    chats[it.chatId]?.isMarkedAsUnread = it.isMarkedAsUnread
+                    updateProperty(it.chatId) { chat ->
+                        chat.apply { isMarkedAsUnread = it.isMarkedAsUnread }
+                    }
                     updateChats()
                 }
                 is TdApi.UpdateChatIsBlocked -> {
-                    chats[it.chatId]?.isBlocked = it.isBlocked
+                    updateProperty(it.chatId) { chat ->
+                        chat.apply { isBlocked = it.isBlocked }
+                    }
                     updateChats()
                 }
                 is TdApi.UpdateChatHasScheduledMessages -> {
-                    chats[it.chatId]?.hasScheduledMessages = it.hasScheduledMessages
+                    updateProperty(it.chatId) { chat ->
+                        chat.apply { hasScheduledMessages = it.hasScheduledMessages }
+                    }
                     updateChats()
                 }
                 //is TdApi.UpdateChatFilters -> {}
@@ -112,6 +158,7 @@ class ChatProvider @Inject constructor(private val client: TelegramClient) {
                 //is TdApi.UpdateChatTheme -> {}
                 //is TdApi.UpdateChatThemes -> {}
                 //is TdApi.UpdateChatVideoChat -> {}
+                // TODO: Make sure message content updates of last messages are updated here, too
 
             }
         }.launchIn(scope)
@@ -125,15 +172,10 @@ class ChatProvider @Inject constructor(private val client: TelegramClient) {
     }
 
     private fun updateChats() {
-        scope.launch {
-            _chatFlow.emit(chatOrderingLock.withLock {
-                chatOrdering.mapNotNull { chats[it.first] }
-            })
-        }
+        chatOrderingLock.withLock { _chatIds.value = chatOrdering.toList().map { it.first } }
     }
 
     private fun updateChatPositions(chatId: Long, positions: Array<TdApi.ChatPosition>) {
-        //Log.d(TAG, "updatepositions: " + positions.joinToString { it.toString() })
         chatOrderingLock.withLock {
             chatOrdering.removeIf { it.first == chatId }
             chatOrdering.add(Pair(chatId,
@@ -144,9 +186,4 @@ class ChatProvider @Inject constructor(private val client: TelegramClient) {
         }
         updateChats()
     }
-
-    fun getChat(chatId: Long): TdApi.Chat? {
-        return chats[chatId]
-    }
-
 }
