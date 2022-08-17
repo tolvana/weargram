@@ -18,7 +18,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import androidx.wear.compose.material.*
 import androidx.wear.input.RemoteInputIntentHelper
@@ -31,93 +30,22 @@ import org.drinkless.td.libcore.telegram.TdApi
 import xyz.tolvanen.weargram.client.TelegramClient
 import xyz.tolvanen.weargram.client.ChatProvider
 import xyz.tolvanen.weargram.client.MessageProvider
-import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val client: TelegramClient,
     private val chatProvider: ChatProvider,
-    private val messageProvider: MessageProvider,
+    val messageProvider: MessageProvider,
 ) : ViewModel() {
 
-    var chatId: Long = -1
-        set(value) {
-            field = value
-            messageProvider.chatId = value
-            chatProvider.getChat(value)?.lastMessage?.id?.also {
-                lastMessageId.set(it)
-            }
-            pullMessages()
-
-            client.updateFlow
-                .filterIsInstance<TdApi.UpdateNewMessage>()
-                .filter { it.message.chatId == chatId }
-                .onEach {
-                    messageDataState[it.message.id] = it.message
-                    messageIds.add(0, it.message.id)
-                    // TODO: update this directly to relevant composables as well?
-            }.launchIn(viewModelScope)
-
-            client.updateFlow
-                .filterIsInstance<TdApi.UpdateDeleteMessages>()
-                .filter { it.chatId == chatId }
-                .filter { it.isPermanent }
-                .onEach {
-                    messageIds.removeAll(it.messageIds.toList())
-                    it.messageIds.forEach { id -> messageDataState.remove(id) }
-            }.launchIn(viewModelScope)
-
-            client.updateFlow
-                .filterIsInstance<TdApi.UpdateMessageContent>()
-                .filter { it.chatId == chatId }
-                .onEach {
-                    messageDataState[it.messageId]?.also { msg ->
-                        msg.content = it.newContent
-                        messageDataState.remove(it.messageId)
-                        messageDataState[it.messageId] = msg
-                }
-            }.launchIn(viewModelScope)
-
-            client.updateFlow
-                .filterIsInstance<TdApi.UpdateMessageSendSucceeded>()
-                .filter { it.message.chatId == chatId }
-                .onEach {
-                    messageDataState[it.message.id] = it.message
-                    messageIds[messageIds.indexOf(it.oldMessageId)] = it.message.id
-                    messageDataState.remove(it.oldMessageId)
-            }.launchIn(viewModelScope)
-        }
-
-    val messageDataState = mutableStateMapOf<Long, TdApi.Message>()
-
-    private val oldestMessageId = AtomicLong(0)
-    private val lastMessageId = AtomicLong(0)
-
-    private val lastQueriedMessageId = AtomicLong(-1)
-
-    // TODO: make this into a set
-    val messageIds = mutableStateListOf<Long>()
+    fun initialize(chatId: Long) {
+        messageProvider.initialize(chatId)
+        pullMessages()
+    }
 
     fun pullMessages() {
-        if (lastQueriedMessageId.get() != oldestMessageId.get()) {
-            val msgId = oldestMessageId.get()
-            lastQueriedMessageId.set(msgId)
-
-            val messageSource = messageProvider.getMessages(msgId, limit = 5)
-            viewModelScope.launch {
-                messageSource.firstOrNull()?.also { messages ->
-                    messageDataState.putAll(messages.associateBy { message -> message.id })
-                    messageIds.addAll(messages.map { message -> message.id })
-
-                    messageIds.lastOrNull()?.also { id ->
-                        if (oldestMessageId.get() != id) {
-                            oldestMessageId.set(id)
-                        }
-                    }
-                }
-            }
-        }
+        messageProvider.pullMessages()
     }
 
     fun sendMessageAsync(content: TdApi.InputMessageContent): Deferred<TdApi.Message> {
@@ -128,11 +56,7 @@ class ChatViewModel @Inject constructor(
 
 @Composable
 fun ChatScreen(navController: NavController, chatId: Long, viewModel: ChatViewModel) {
-
-    LaunchedEffect(chatId) {
-        viewModel.chatId = chatId
-    }
-
+    LaunchedEffect(chatId) { viewModel.initialize(chatId) }
     ChatScaffold(navController, chatId, viewModel)
 }
 
@@ -140,8 +64,8 @@ fun ChatScreen(navController: NavController, chatId: Long, viewModel: ChatViewMo
 @Composable
 fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatViewModel) {
 
-    val messageIds = viewModel.messageIds
-    val messages = viewModel.messageDataState
+    val messageIds by viewModel.messageProvider.messageIds.collectAsState()
+    val messages by viewModel.messageProvider.messageData.collectAsState()
 
     val listState = rememberScalingLazyListState()
     val coroutineScope = rememberCoroutineScope()

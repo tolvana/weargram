@@ -72,7 +72,9 @@ dependencies {
     debugImplementation "androidx.compose.ui:ui-test-manifest:$compose_version"
     implementation "androidx.wear.compose:compose-navigation:1.0.0"
     implementation 'androidx.compose.runtime:runtime-livedata:1.3.0-alpha02'
-    implementation 'com.google.zxing:core:3.5.0'
+    implementation 'com.google.zxing:core:3.5.0' // For QR code generation
+
+    implementation "org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.5"
 
     implementation "com.google.dagger:hilt-android:$hilt_version"
     kapt "com.google.dagger:hilt-compiler:$hilt_version"

@@ -37,87 +37,70 @@ class ChatProvider @Inject constructor(private val client: TelegramClient) {
         client.updateFlow.onEach {
             when (it) {
                 is TdApi.UpdateChatPosition -> {
-                    Log.d(TAG, "chatPosition: $it")
                     updateChatPositions(it.chatId, arrayOf(it.position))
                 }
                 is TdApi.UpdateChatLastMessage -> {
-                    Log.d(TAG, "chatLastMessage: $it")
                     chats[it.chatId]?.lastMessage = it.lastMessage
                     updateChatPositions(it.chatId, it.positions)
                 }
                 is TdApi.UpdateChatTitle -> {
-                    Log.d(TAG, "chatTitle: $it")
                     chats[it.chatId]?.title = it.title
                     updateChats()
                 }
                 is TdApi.UpdateNewChat -> {
-                    Log.d(TAG, "newChat: $it")
                     chats[it.chat.id] = it.chat
                     updateChatPositions(it.chat.id, it.chat.positions)
                 }
                 is TdApi.UpdateChatReadInbox -> {
-                    Log.d(TAG, "chatReadInbox: $it")
                     chats[it.chatId]?.lastReadInboxMessageId = it.lastReadInboxMessageId
                     chats[it.chatId]?.unreadCount = it.unreadCount
                     updateChats()
                 }
                 is TdApi.UpdateChatReadOutbox -> {
-                    Log.d(TAG, "chatReadOutbox: $it")
                     chats[it.chatId]?.lastReadInboxMessageId = it.lastReadOutboxMessageId
                     updateChats()
                 }
                 is TdApi.UpdateChatPhoto -> {
-                    Log.d(TAG, "chatPhoto: $it")
                     chats[it.chatId]?.photo = it.photo
                     updateChats()
                 }
                 is TdApi.UpdateChatUnreadMentionCount -> {
-                    Log.d(TAG, "chatUnreadMentionCount: $it")
                     chats[it.chatId]?.unreadMentionCount = it.unreadMentionCount
                     updateChats()
                 }
                 is TdApi.UpdateMessageMentionRead -> {
-                    Log.d(TAG, "messageMentionRead: $it")
                     chats[it.chatId]?.unreadMentionCount = it.unreadMentionCount
                     updateChats()
                 }
                 is TdApi.UpdateChatReplyMarkup -> {
-                    Log.d(TAG, "chatReplyMarkup: $it")
                     chats[it.chatId]?.replyMarkupMessageId = it.replyMarkupMessageId
                     updateChats()
                 }
                 is TdApi.UpdateChatDraftMessage -> {
-                    Log.d(TAG, "chatDraftMessage: $it")
                     chats[it.chatId]?.draftMessage = it.draftMessage
                     updateChatPositions(it.chatId, it.positions)
                 }
                 is TdApi.UpdateChatPermissions -> {
-                    Log.d(TAG, "chatPermissions: $it")
                     chats[it.chatId]?.permissions = it.permissions
                     updateChats()
                 }
                 is TdApi.UpdateChatNotificationSettings -> {
-                    Log.d(TAG, "chatNotificationSettings: $it")
                     chats[it.chatId]?.notificationSettings = it.notificationSettings
                     updateChats()
                 }
                 is TdApi.UpdateChatDefaultDisableNotification -> {
-                    Log.d(TAG, "chatDefaultDisableNotification: $it")
                     chats[it.chatId]?.defaultDisableNotification = it.defaultDisableNotification
                     updateChats()
                 }
                 is TdApi.UpdateChatIsMarkedAsUnread -> {
-                    Log.d(TAG, "chatIsMarkedAsUnread: $it")
                     chats[it.chatId]?.isMarkedAsUnread = it.isMarkedAsUnread
                     updateChats()
                 }
                 is TdApi.UpdateChatIsBlocked -> {
-                    Log.d(TAG, "chatIsBlocked: $it")
                     chats[it.chatId]?.isBlocked = it.isBlocked
                     updateChats()
                 }
                 is TdApi.UpdateChatHasScheduledMessages -> {
-                    Log.d(TAG, "chatHasSchedulesMessages: $it")
                     chats[it.chatId]?.hasScheduledMessages = it.hasScheduledMessages
                     updateChats()
                 }
@@ -152,7 +135,7 @@ class ChatProvider @Inject constructor(private val client: TelegramClient) {
     }
 
     private fun updateChatPositions(chatId: Long, positions: Array<TdApi.ChatPosition>) {
-        Log.d(TAG, "updatepositions: " + positions.joinToString { it.toString() })
+        //Log.d(TAG, "updatepositions: " + positions.joinToString { it.toString() })
         chatOrderingLock.withLock {
             chatOrdering.removeIf { it.first == chatId }
             chatOrdering.add(Pair(chatId,
