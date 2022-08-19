@@ -82,5 +82,26 @@ class TelegramClient @Inject constructor(private val parameters: TdApi.TdlibPara
         requestScope.launch { client.send(TdApi.SetTdlibParameters(parameters)) {} }
     }
 
+    fun getFilePath(file: TdApi.File): Flow<String?> =
+        file.takeIf {
+            it.local?.isDownloadingCompleted == false
+        }?.let {
+            downloadFileAsync(it)
+        } ?: flowOf(file.local?.path)
+
+    private fun downloadFileAsync(file: TdApi.File): Flow<String?> = callbackFlow {
+        requestScope.launch {
+            sendRequest(TdApi.DownloadFile(file.id, 1, 0, 0, true)).collect {
+                if (it is TdApi.File) {
+                    trySend(it.local?.path)
+                } else {
+                    trySend(null)
+                }
+            }
+        }
+        awaitClose {  }
+
+    }
+
 }
 

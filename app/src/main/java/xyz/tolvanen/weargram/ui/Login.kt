@@ -70,10 +70,10 @@ class LoginViewModel @Inject constructor(private val authenticator: Authenticato
 
     }
 
-    private val size = 512f
     private fun generateQrCode(token: String) {
+        val size = 512f
         val mat = Encoder.encode(token, ErrorCorrectionLevel.L).matrix
-        val bmpSize = (size * (mat.height + 2) / mat.height).toInt()
+        val bmpSize = ((size * (mat.height + 2)) / mat.height).toInt()
         val offset = (bmpSize - size) / 2
         val bmp = Bitmap.createBitmap(bmpSize, bmpSize, Bitmap.Config.RGB_565)
         for (i in 0 until bmpSize) {

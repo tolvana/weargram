@@ -2,6 +2,7 @@ package xyz.tolvanen.weargram.ui
 
 import android.app.RemoteInput
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Log
 import android.view.inputmethod.EditorInfo
@@ -16,7 +17,10 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import androidx.wear.compose.material.*
@@ -68,11 +72,25 @@ class ChatViewModel @Inject constructor(
         )
     }
 
+
+    fun fetchPhoto(photoMessage: TdApi.MessagePhoto): Flow<ImageBitmap?> {
+        val file = photoMessage.photo.sizes.last().photo
+        return client.getFilePath(file)
+            .map {
+                Log.d(TAG, "got filepath $it")
+                it?.let {
+                    BitmapFactory.decodeFile(it)?.asImageBitmap()
+                }
+            }
+    }
+
 }
 
 @Composable
 fun ChatScreen(navController: NavController, chatId: Long, viewModel: ChatViewModel) {
 
+    Log.d("ChatScreen", "recomp")
+    Log.d("ChatScreen", "yay")
     LaunchedEffect(chatId) { viewModel.initialize(chatId) }
     DisposableEffect(viewModel) {
         viewModel.onStart(chatId)
@@ -102,86 +120,91 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
     }
 
     //BottomSheetScaffold(sheetContent = {}) {
-        Scaffold(
-            positionIndicator = {
-                PositionIndicator(
-                    scalingLazyListState = listState,
-                    modifier = Modifier
-                )
-            },
-            vignette = { Vignette(vignettePosition = VignettePosition.TopAndBottom) },
-        ) {
-            Column() {
+    Scaffold(
+        positionIndicator = {
+            PositionIndicator(
+                scalingLazyListState = listState,
+                modifier = Modifier
+            )
+        },
+        vignette = { Vignette(vignettePosition = VignettePosition.TopAndBottom) },
+    ) {
+        Column() {
 
-                ScalingLazyColumn(
-                    state = listState,
-                    reverseLayout = true,
-                    modifier = Modifier
-                        .onRotaryScrollEvent {
-                            coroutineScope.launch {
-                                listState.animateScrollBy(it.verticalScrollPixels)
-                            }
-                            false
+            ScalingLazyColumn(
+                state = listState,
+                reverseLayout = true,
+                modifier = Modifier
+                    .onRotaryScrollEvent {
+                        coroutineScope.launch {
+                            listState.animateScrollBy(it.verticalScrollPixels)
                         }
-                        .focusRequester(focusRequester)
-                        .focusable()
-
-                ) {
-                    item {
-                        val input = remember { mutableStateOf("") }
-                        val scope = rememberCoroutineScope()
-                        MessageInput(
-                            input = input,
-                            sendMessage = {
-                                scope.launch {
-                                    viewModel.sendMessageAsync(
-                                        content = TdApi.InputMessageText(
-                                            TdApi.FormattedText(
-                                                it,
-                                                emptyArray()
-                                            ), false, false
-                                        )
-                                    ).await()
-
-                                    input.value = ""
-                                    // TODO: refresh history
-
-                                }
-                            }
-                        )
+                        false
                     }
-                    items(messageIds.toList(), key = { it }) { id ->
-                        messages[id]?.also { message ->
-                            MessageItem(message)
-                        }
-                    }
+                    .focusRequester(focusRequester)
+                    .focusable()
 
-                    item {
-                        LaunchedEffect(true) {
-                            Log.d("ChatScaffold", "end of list reached")
-                            viewModel.pullMessages()
+            ) {
+                item {
+                    val input = remember { mutableStateOf("") }
+                    val scope = rememberCoroutineScope()
+                    MessageInput(
+                        input = input,
+                        sendMessage = {
+                            scope.launch {
+                                viewModel.sendMessageAsync(
+                                    content = TdApi.InputMessageText(
+                                        TdApi.FormattedText(
+                                            it,
+                                            emptyArray()
+                                        ), false, false
+                                    )
+                                ).await()
+
+                                input.value = ""
+                                // TODO: refresh history
+
+                            }
                         }
+                    )
+                }
+                items(messageIds.toList(), key = { it }) { id ->
+                    messages[id]?.also { message ->
+                        MessageItem(message, viewModel)
                     }
                 }
 
-                LaunchedEffect(Unit) {
-                    focusRequester.requestFocus()
+                item {
+                    LaunchedEffect(true) {
+                        // TODO: make sure this is not looped when end of chat history is reached
+                        viewModel.pullMessages()
+                    }
                 }
-
             }
+
+            LaunchedEffect(Unit) {
+                focusRequester.requestFocus()
+            }
+
+        }
 
         //}
 
     }
 
 }
+
+
 @Composable
-fun MessageItem(message: TdApi.Message) {
+fun MessageItem(message: TdApi.Message, viewModel: ChatViewModel) {
     if (message.isOutgoing) {
 
     }
-    Card(onClick = { /*TODO*/ }) {
-        MessageContent(message)
+    Card(
+        onClick = { /*TODO*/ },
+        contentPadding = PaddingValues(0.dp)
+    ) {
+        MessageContent(message, viewModel, modifier = Modifier.padding(CardDefaults.ContentPadding))
     }
 
 }
