@@ -27,9 +27,9 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.drinkless.td.libcore.telegram.TdApi
-import xyz.tolvanen.weargram.client.TelegramClient
 import xyz.tolvanen.weargram.client.ChatProvider
 import xyz.tolvanen.weargram.client.MessageProvider
+import xyz.tolvanen.weargram.client.TelegramClient
 import javax.inject.Inject
 
 @HiltViewModel
@@ -93,11 +93,12 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
     val coroutineScope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
 
-    //Log.d("ChatScaffold", "has ${messageIds.size} messages")
-
-    LaunchedEffect(listState.layoutInfo.visibleItemsInfo) {
-        viewModel.updateVisibleItems(listState.layoutInfo.visibleItemsInfo)
-
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo }
+            .distinctUntilChanged()
+            .collect {
+                viewModel.updateVisibleItems(it)
+            }
     }
 
     //BottomSheetScaffold(sheetContent = {}) {

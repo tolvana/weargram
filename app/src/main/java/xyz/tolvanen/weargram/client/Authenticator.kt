@@ -34,6 +34,7 @@ class Authenticator @Inject constructor(private val client: TelegramClient) {
     }
 
     fun setPhoneNumber(phoneNumber: String) {
+        // TODO: sanitize input?
         Log.d(TAG, "phoneNumber: $phoneNumber")
         val settings = TdApi.PhoneNumberAuthenticationSettings()
 
@@ -56,6 +57,7 @@ class Authenticator @Inject constructor(private val client: TelegramClient) {
     }
 
     fun setCode(code: String) {
+        // TODO: sanitize input?
         Log.d(TAG, "code: $code")
         scope.launch {
             client.sendRequest(TdApi.CheckAuthenticationCode(code)).collect {
