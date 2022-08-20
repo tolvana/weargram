@@ -1,9 +1,6 @@
-package xyz.tolvanen.weargram.ui
+package xyz.tolvanen.weargram.ui.chat
 
 import android.util.Log
-import android.view.MotionEvent
-import android.view.View
-import android.view.View.OnTouchListener
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,23 +9,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.core.content.res.ResourcesCompat
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import org.drinkless.td.libcore.telegram.TdApi
-import org.drinkless.td.libcore.telegram.TdApi.Location
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.overlay.Marker
 import xyz.tolvanen.weargram.R
+import xyz.tolvanen.weargram.ui.MapView
 
 @Composable
-fun MessageContent(message: TdApi.Message, viewModel: ChatViewModel, modifier: Modifier = Modifier) {
+fun MessageContent(
+    message: TdApi.Message,
+    viewModel: ChatViewModel,
+    modifier: Modifier = Modifier
+) {
     val content = message.content
     Log.d("MessageContent", "top")
     Log.d("MessageContent", "kek")
@@ -58,9 +55,14 @@ fun TextMessage(content: TdApi.MessageText, modifier: Modifier = Modifier) {
         style = MaterialTheme.typography.body2
     )
 }
+
 @Composable
-fun PhotoMessage(content: TdApi.MessagePhoto, viewModel: ChatViewModel, modifier: Modifier = Modifier) {
-    val image= remember { viewModel.fetchPhoto(content) }.collectAsState(initial = null)
+fun PhotoMessage(
+    content: TdApi.MessagePhoto,
+    viewModel: ChatViewModel,
+    modifier: Modifier = Modifier
+) {
+    val image = remember { viewModel.fetchPhoto(content) }.collectAsState(initial = null)
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -127,7 +129,10 @@ fun LocationMessage(content: TdApi.MessageLocation, modifier: Modifier = Modifie
             it.invalidate()
         }
     )
-    Text("Location: lat ${content.location.latitude}, lon ${content.location.longitude}", modifier = modifier)
+    Text(
+        "Location: lat ${content.location.latitude}, lon ${content.location.longitude}",
+        modifier = modifier
+    )
 }
 
 @Composable
@@ -149,6 +154,7 @@ fun CallMessage(content: TdApi.MessageCall, modifier: Modifier = Modifier) {
 fun PollMessage(content: TdApi.MessagePoll, modifier: Modifier = Modifier) {
     Text("Poll", modifier = modifier)
 }
+
 @Composable
 fun UnsupportedMessage(content: TdApi.MessageContent, modifier: Modifier = Modifier) {
     Text("Unsupported message", modifier = modifier)

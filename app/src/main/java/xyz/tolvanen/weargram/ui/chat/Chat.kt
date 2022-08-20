@@ -1,8 +1,7 @@
-package xyz.tolvanen.weargram.ui
+package xyz.tolvanen.weargram.ui.chat
 
 import android.app.RemoteInput
 import android.content.Intent
-import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Log
 import android.view.inputmethod.EditorInfo
@@ -19,81 +18,20 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import androidx.wear.compose.material.*
 import androidx.wear.input.RemoteInputIntentHelper
 import androidx.wear.input.wearableExtender
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.drinkless.td.libcore.telegram.TdApi
 import xyz.tolvanen.weargram.R
 import xyz.tolvanen.weargram.Screen
-import xyz.tolvanen.weargram.client.ChatProvider
-import xyz.tolvanen.weargram.client.MessageProvider
-import xyz.tolvanen.weargram.client.TelegramClient
-import javax.inject.Inject
-
-@HiltViewModel
-class ChatViewModel @Inject constructor(
-    private val client: TelegramClient,
-    private val chatProvider: ChatProvider,
-    val messageProvider: MessageProvider,
-) : ViewModel() {
-
-    private val TAG = this::class.simpleName
-
-    fun initialize(chatId: Long) {
-        messageProvider.initialize(chatId)
-        pullMessages()
-    }
-
-    fun pullMessages() {
-        messageProvider.pullMessages()
-    }
-
-    fun sendMessageAsync(content: TdApi.InputMessageContent): Deferred<TdApi.Message> {
-        return messageProvider.sendMessageAsync(0, 0, TdApi.MessageSendOptions(), content)
-    }
-
-    fun onStart(chatId: Long) {
-        client.sendUnscopedRequest(TdApi.OpenChat(chatId))
-    }
-
-    fun onStop(chatId: Long) {
-        client.sendUnscopedRequest(TdApi.CloseChat(chatId))
-    }
-
-    fun updateVisibleItems(visibleItems: List<ScalingLazyListItemInfo>) {
-        messageProvider.updateSeenItems(
-            visibleItems.map { it.key }.filterIsInstance<Long>()
-        )
-    }
-
-
-    fun fetchPhoto(photoMessage: TdApi.MessagePhoto): Flow<ImageBitmap?> {
-        val file = photoMessage.photo.sizes.last().photo
-        return client.getFilePath(file)
-            .map {
-                Log.d(TAG, "got filepath $it")
-                it?.let {
-                    BitmapFactory.decodeFile(it)?.asImageBitmap()
-                }
-            }
-    }
-
-}
 
 @Composable
 fun ChatScreen(navController: NavController, chatId: Long, viewModel: ChatViewModel) {

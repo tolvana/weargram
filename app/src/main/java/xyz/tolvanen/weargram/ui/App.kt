@@ -15,6 +15,9 @@ import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavHostState
 import xyz.tolvanen.weargram.Screen
 import xyz.tolvanen.weargram.theme.WeargramTheme
+import xyz.tolvanen.weargram.ui.chat.ChatScreen
+import xyz.tolvanen.weargram.ui.home.HomeScreen
+import xyz.tolvanen.weargram.ui.login.LoginScreen
 
 @Composable
 fun App() {
