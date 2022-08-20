@@ -188,7 +188,7 @@ fun MessageInput(
                         .setLabel("Text message?")
                         .wearableExtender {
                             setEmojisAllowed(true)
-                            setInputActionType(EditorInfo.IME_ACTION_DONE)
+                            setInputActionType(EditorInfo.IME_ACTION_SEND)
                         }.build()
                 )
                 RemoteInputIntentHelper.putRemoteInputsExtra(intent, remoteInputs)

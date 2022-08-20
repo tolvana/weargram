@@ -3,10 +3,7 @@ package xyz.tolvanen.weargram.ui.chat
 import android.media.MediaMetadataRetriever
 import android.util.Log
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
@@ -16,6 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import androidx.wear.compose.material.*
@@ -157,7 +155,11 @@ fun VideoMessage(
 
             }
 
-        } ?: CircularProgressIndicator()
+        } ?: CircularProgressIndicator(
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(4.dp)
+        )
 
         content.caption.text.takeIf { it.isNotEmpty() }?.let {
             Text(

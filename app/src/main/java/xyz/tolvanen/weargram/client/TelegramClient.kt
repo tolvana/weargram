@@ -54,11 +54,11 @@ class TelegramClient @Inject constructor(private val parameters: TdApi.TdlibPara
         }
     }
 
-    private val client = Client.create(resultHandler, null, null)
+    private var client: Client
 
     init {
+        client = Client.create(resultHandler, null, null)
         client.send(TdApi.SetLogVerbosityLevel(0), resultHandler)
-
     }
 
     private val requestScope = CoroutineScope(Dispatchers.IO)
@@ -80,6 +80,11 @@ class TelegramClient @Inject constructor(private val parameters: TdApi.TdlibPara
 
     fun start() {
         requestScope.launch { client.send(TdApi.SetTdlibParameters(parameters)) {} }
+    }
+
+    fun reset() {
+        client = Client.create(resultHandler, null, null)
+        client.send(TdApi.SetLogVerbosityLevel(0), resultHandler)
     }
 
     fun getFilePath(file: TdApi.File): Flow<String?> =

@@ -1,5 +1,6 @@
 package xyz.tolvanen.weargram.ui.home
 
+import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -21,6 +22,7 @@ class HomeViewModel @Inject constructor(
 
     init {
         authenticator.authorizationState.onEach {
+            Log.d("HomeViewModel", "$it")
             when (it) {
                 Authorization.UNAUTHORIZED -> {
                     homeState.value = HomeState.Loading

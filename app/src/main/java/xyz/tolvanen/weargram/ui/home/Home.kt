@@ -12,11 +12,14 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.wear.compose.material.*
 import kotlinx.coroutines.launch
 import org.drinkless.td.libcore.telegram.TdApi
+import xyz.tolvanen.weargram.R
 import xyz.tolvanen.weargram.Screen
 
 @Composable
@@ -74,8 +77,22 @@ fun HomeScaffold(navController: NavController, viewModel: HomeViewModel) {
                 }
                 .focusRequester(focusRequester)
                 .focusable()
-                .wrapContentHeight()
+                .wrapContentHeight(),
         ) {
+
+            item {
+                CompactButton(
+                    onClick = {},
+                    modifier = Modifier.padding(6.dp),
+                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.surface)
+                ) {
+                    Icon(
+                        painterResource(id = R.drawable.baseline_menu_24),
+                        contentDescription = null,
+                    )
+
+                }
+            }
             items(chats) { chatId ->
                 chatData[chatId]?.let { chat ->
                     ChatItem(

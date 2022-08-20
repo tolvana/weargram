@@ -2,7 +2,6 @@ package xyz.tolvanen.weargram.ui.login
 
 import android.app.RemoteInput
 import android.content.Intent
-import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.inputmethod.EditorInfo
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -14,70 +13,118 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.material.Chip
-import androidx.wear.compose.material.CircularProgressIndicator
-import androidx.wear.compose.material.Text
+import androidx.wear.compose.material.*
 import androidx.wear.input.RemoteInputIntentHelper
 import androidx.wear.input.wearableExtender
+import xyz.tolvanen.weargram.R
 
 @Composable
 fun LoginScreen(viewModel: LoginViewModel, loggedIn: () -> Unit) {
 
     val loginState by viewModel.loginState
-    val qrCode by viewModel.qrCode
 
     when (loginState) {
         is LoginState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
-        is LoginState.SetNumber -> PhoneNumberScreen(qrCode) {
-            viewModel.setNumber(it)
-        }
-        is LoginState.SetCode -> CodeScreen {
-            viewModel.setCode(it)
-        }
-        is LoginState.SetPassword -> PasswordScreen {
-            viewModel.setPassword(it)
-        }
+        is LoginState.SetNumber -> PhoneNumberScreen(viewModel) { viewModel.setNumber(it) }
+        is LoginState.ShowQrCode -> QrCodeScreen(viewModel)
+        is LoginState.SetCode -> CodeScreen { viewModel.setCode(it) }
+        is LoginState.SetPassword -> PasswordScreen { viewModel.setPassword(it) }
         is LoginState.Authorized -> loggedIn()
     }
 }
 
 @Composable
-fun PhoneNumberScreen(qrCode: Bitmap?, onEntry: (String) -> Unit) {
+fun PhoneNumberScreen(viewModel: LoginViewModel, onEntry: (String) -> Unit) {
+    val launcher =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            it.data?.let { data ->
+                val results: Bundle = RemoteInput.getResultsFromIntent(data)
+                val input: CharSequence? = results.getCharSequence("input")
+                onEntry(input.toString())
+            }
+        }
+
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     )
     {
-        qrCode?.let {
-            Spacer(modifier = Modifier.height(16.dp))
-            Box(
-                modifier = Modifier.fillMaxSize(0.55f),
-                contentAlignment = Alignment.Center
-            ) {
-                //Image(
-                //    ColorPainter(androidx.compose.ui.graphics.Color.White),
-                //    null,
-                //    modifier = Modifier
-                //        .fillMaxWidth()
-                //        .fillMaxHeight()
-                //)
-                Image(
-                    it.asImageBitmap(), "Scan this QR Code with a logged in Telegram client",
-                    modifier = Modifier.fillMaxSize(0.95f)
+        Text(
+            "Login options",
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        Chip(
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .padding(4.dp),
+            onClick = { viewModel.requestQrCode() },
+            label = { Text("Scan QR code") },
+            icon = {
+                Icon(
+                    painter = painterResource(id = R.drawable.baseline_qr_code_24),
+                    contentDescription = null
                 )
-            }
+            },
+            colors = ChipDefaults.chipColors(backgroundColor = MaterialTheme.colors.surface)
+        )
 
+        Chip(
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .padding(4.dp),
+            onClick = {
+                val intent: Intent = RemoteInputIntentHelper.createActionRemoteInputIntent()
+                val remoteInputs: List<RemoteInput> = listOf(
+                    RemoteInput.Builder("input")
+                        .setLabel("")
+                        .wearableExtender {
+                            setEmojisAllowed(false)
+                            setInputActionType(EditorInfo.IME_ACTION_DONE)
+                        }.build()
+                )
 
-        } ?: CircularProgressIndicator()
+                RemoteInputIntentHelper.putRemoteInputsExtra(intent, remoteInputs)
 
-        AuthScreen(
-            prompt = "Enter phone number",
-            details = "pls enter phone number",
-            onEntry = onEntry
+                launcher.launch(intent)
+
+            },
+            label = { Text("Enter phone number") },
+            icon = {
+                Icon(
+                    painter = painterResource(id = R.drawable.baseline_phone_24),
+                    contentDescription = null
+                )
+            },
+            colors = ChipDefaults.chipColors(backgroundColor = MaterialTheme.colors.surface)
         )
     }
+}
+
+@Composable
+fun QrCodeScreen(viewModel: LoginViewModel) {
+
+    val qrCode by viewModel.qrCode
+
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        qrCode?.let {
+            Image(
+                it.asImageBitmap(),
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxSize(0.6f)
+                    .align(Alignment.Center)
+            )
+        } ?: CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+
+    }
+
 }
 
 @Composable
@@ -113,6 +160,7 @@ fun AuthScreen(prompt: String, details: String? = null, onEntry: (String) -> Uni
         Chip(
             //modifier = Modifier.wrapContentSize(Alignment.Center),
             label = { Text(prompt) },
+            colors = ChipDefaults.chipColors(backgroundColor = MaterialTheme.colors.surface),
             onClick = {
                 val intent: Intent = RemoteInputIntentHelper.createActionRemoteInputIntent()
                 val remoteInputs: List<RemoteInput> = listOf(
@@ -135,6 +183,7 @@ fun AuthScreen(prompt: String, details: String? = null, onEntry: (String) -> Uni
 sealed class LoginState {
     object Loading : LoginState()
     data class SetNumber(val previousError: Throwable? = null) : LoginState()
+    data class ShowQrCode(val previousError: Throwable? = null) : LoginState()
     data class SetCode(val previousError: Throwable? = null) : LoginState()
     data class SetPassword(val previousError: Throwable? = null) : LoginState()
     object Authorized : LoginState()

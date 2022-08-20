@@ -37,6 +37,7 @@ class Authenticator @Inject constructor(private val client: TelegramClient) {
         // TODO: sanitize input?
         Log.d(TAG, "phoneNumber: $phoneNumber")
         val settings = TdApi.PhoneNumberAuthenticationSettings()
+        _authorizationState.value = Authorization.PENDING
 
         scope.launch {
             client.sendRequest(TdApi.SetAuthenticationPhoneNumber(phoneNumber, settings)).collect {
@@ -59,6 +60,7 @@ class Authenticator @Inject constructor(private val client: TelegramClient) {
     fun setCode(code: String) {
         // TODO: sanitize input?
         Log.d(TAG, "code: $code")
+        _authorizationState.value = Authorization.PENDING
         scope.launch {
             client.sendRequest(TdApi.CheckAuthenticationCode(code)).collect {
                 when (it.constructor) {
@@ -76,6 +78,7 @@ class Authenticator @Inject constructor(private val client: TelegramClient) {
 
     fun setPassword(password: String) {
         Log.d(TAG, "password: $password")
+        _authorizationState.value = Authorization.PENDING
         scope.launch {
             client.sendRequest(TdApi.CheckAuthenticationPassword(password)).collect {
                 when (it.constructor) {
@@ -105,11 +108,9 @@ class Authenticator @Inject constructor(private val client: TelegramClient) {
             is TdApi.AuthorizationStateWaitEncryptionKey -> {
                 Log.d(TAG, "onResult: AuthorizationStateWaitEncryptionKey")
                 client.sendUnscopedRequest(TdApi.CheckDatabaseEncryptionKey())
-
             }
             is TdApi.AuthorizationStateWaitPhoneNumber -> {
                 Log.d(TAG, "onResult: AuthorizationStateWaitPhoneNumber -> state = WAIT_NUMBER")
-                client.sendUnscopedRequest(TdApi.RequestQrCodeAuthentication())
                 _authorizationState.value = Authorization.WAIT_NUMBER
             }
             is TdApi.AuthorizationStateWaitCode -> {
@@ -122,11 +123,10 @@ class Authenticator @Inject constructor(private val client: TelegramClient) {
             }
             is TdApi.AuthorizationStateWaitOtherDeviceConfirmation -> {
                 Log.d(TAG, "onResult: AuthorizationStateWaitOtherDeviceConfirmation")
-                _authorizationState.value = Authorization.WAIT_NUMBER
+                _authorizationState.value = Authorization.WAIT_OTHER_DEVICE_CONFIRMATION
                 val link =
                     (authorizationUpdate.authorizationState as TdApi.AuthorizationStateWaitOtherDeviceConfirmation).link
                 _tokenState.value = link
-                Log.d(TAG, link)
 
             }
             is TdApi.AuthorizationStateReady -> {
@@ -137,7 +137,21 @@ class Authenticator @Inject constructor(private val client: TelegramClient) {
                 Log.d(TAG, "onResult: AuthorizationStateLoggingOut")
                 _authorizationState.value = Authorization.UNAUTHORIZED
             }
+            is TdApi.AuthorizationStateClosed -> {
+                Log.d(TAG, "onResult: AuthorizationStateClosed")
+                _authorizationState.value = Authorization.UNAUTHORIZED
+                client.reset()
+                client.start()
+            }
         }
+    }
+
+    fun requestQrCode() {
+        client.sendUnscopedRequest(TdApi.RequestQrCodeAuthentication())
+    }
+
+    fun reset() {
+        client.sendUnscopedRequest(TdApi.LogOut())
     }
 
 }

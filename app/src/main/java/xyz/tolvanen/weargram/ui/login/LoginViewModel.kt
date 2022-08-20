@@ -1,14 +1,18 @@
 package xyz.tolvanen.weargram.ui.login
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.util.Log
+import android.widget.Toast
+import androidx.compose.runtime.currentCompositionLocalContext
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import com.google.zxing.qrcode.encoder.Encoder
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import xyz.tolvanen.weargram.client.Authenticator
@@ -16,27 +20,47 @@ import xyz.tolvanen.weargram.client.Authorization
 import javax.inject.Inject
 
 @HiltViewModel
-class LoginViewModel @Inject constructor(private val authenticator: Authenticator) : ViewModel() {
+class LoginViewModel @Inject constructor(
+    private val authenticator: Authenticator,
+    @ApplicationContext context: Context
+) : ViewModel() {
 
     val loginState = mutableStateOf<LoginState>(LoginState.SetNumber())
 
     val qrCode = mutableStateOf<Bitmap?>(null)
 
     init {
+        authenticator.reset()
         authenticator.authorizationState.onEach {
             Log.d("kek", "here with $it")
             when (it) {
                 Authorization.UNAUTHORIZED -> {
                     loginState.value = LoginState.Loading
                 }
-                Authorization.WAIT_NUMBER, Authorization.INVALID_NUMBER -> {
+                Authorization.WAIT_NUMBER -> {
                     loginState.value = LoginState.SetNumber()
                 }
-                Authorization.WAIT_CODE, Authorization.INVALID_CODE -> {
+                Authorization.INVALID_NUMBER -> {
+                    loginState.value = LoginState.SetNumber()
+                    Toast.makeText(context, "Invalid phone number", Toast.LENGTH_SHORT).show()
+                }
+                Authorization.WAIT_OTHER_DEVICE_CONFIRMATION -> {
+                    loginState.value = LoginState.ShowQrCode()
+                }
+                Authorization.WAIT_CODE -> {
                     loginState.value = LoginState.SetCode()
                 }
-                Authorization.WAIT_PASSWORD, Authorization.INVALID_PASSWORD -> {
+                Authorization.INVALID_CODE -> {
+                    loginState.value = LoginState.SetCode()
+                    Toast.makeText(context, "Invalid code", Toast.LENGTH_SHORT).show()
+
+                }
+                Authorization.WAIT_PASSWORD -> {
                     loginState.value = LoginState.SetPassword()
+                }
+                Authorization.INVALID_PASSWORD -> {
+                    loginState.value = LoginState.SetPassword()
+                    Toast.makeText(context, "Invalid password", Toast.LENGTH_SHORT).show()
                 }
                 Authorization.AUTHORIZED -> {
                     loginState.value = LoginState.Authorized
@@ -74,6 +98,11 @@ class LoginViewModel @Inject constructor(private val authenticator: Authenticato
         }
 
         qrCode.value = bmp
+    }
+
+    fun requestQrCode() {
+        authenticator.requestQrCode()
+        loginState.value = LoginState.Loading
     }
 
     fun setNumber(number: String) {

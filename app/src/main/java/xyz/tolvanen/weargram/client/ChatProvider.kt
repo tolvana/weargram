@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.drinkless.td.libcore.telegram.TdApi
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantLock
 import javax.inject.Inject
 import kotlin.concurrent.withLock
@@ -178,11 +177,10 @@ class ChatProvider @Inject constructor(private val client: TelegramClient) {
     private fun updateChatPositions(chatId: Long, positions: Array<TdApi.ChatPosition>) {
         chatOrderingLock.withLock {
             chatOrdering.removeIf { it.first == chatId }
-            chatOrdering.add(Pair(chatId,
-                positions.dropWhile { it.list.constructor != TdApi.ChatListMain.CONSTRUCTOR }
-                    .firstOrNull()?.order ?: 0
-            )
-            )
+            positions.dropWhile { it.list !is TdApi.ChatListMain }
+                .firstOrNull()?.order?.also { order ->
+                    chatOrdering.add(Pair(chatId, order))
+                }
         }
         updateChats()
     }

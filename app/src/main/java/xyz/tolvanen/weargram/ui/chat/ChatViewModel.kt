@@ -1,7 +1,6 @@
 package xyz.tolvanen.weargram.ui.chat
 
 import android.graphics.BitmapFactory
-import android.util.Log
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.ViewModel
@@ -9,7 +8,6 @@ import androidx.wear.compose.material.ScalingLazyListItemInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.forEach
 import kotlinx.coroutines.flow.map
 import org.drinkless.td.libcore.telegram.TdApi
 import xyz.tolvanen.weargram.client.ChatProvider
