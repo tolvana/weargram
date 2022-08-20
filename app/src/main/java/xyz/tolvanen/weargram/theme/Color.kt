@@ -6,7 +6,7 @@ import androidx.wear.compose.material.Colors
 val Purple200 = Color(0xFFFFFFFF)
 val primaryBlue = Color(0xFF8888EE)
 val Purple500 = Color(0xFF6200EE)
-val Purple700 = Color(0xFF3700B3)
+val Purple700 = Color(0xFF1F2968)
 val Teal200 = Color(0xFF03DAC5)
 val Red400 = Color(0xFFCF6679)
 

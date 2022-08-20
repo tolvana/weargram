@@ -29,12 +29,10 @@ private fun MainNavHost(navController: NavHostController) {
     SwipeDismissableNavHost(navController, startDestination = Screen.Home.route) {
 
         composable(Screen.Home.route) {
-            //Log.d("top", "home: ${navController.backQueue.joinToString { entry -> entry.destination.toString()}}")
             HomeScreen(navController, hiltViewModel(it))
         }
 
         composable(Screen.Login.route) {
-            //Log.d("top", "login: ${navController.backQueue.joinToString { entry -> entry.destination.toString()}}")
             LoginScreen(hiltViewModel(it)) {
                 navController.navigate(Screen.Home.route) {
                     popUpTo(Screen.Login.route) { inclusive = true }
@@ -45,7 +43,6 @@ private fun MainNavHost(navController: NavHostController) {
 
         composable(Screen.Chat.route) {
             val chatId = Screen.Chat.getChatId(it)
-            //Log.d("top", "chat: ${navController.backQueue.joinToString { entry -> entry.destination.toString()}}")
             ChatScreen(
                 navController = navController,
                 chatId = chatId,
@@ -53,6 +50,13 @@ private fun MainNavHost(navController: NavHostController) {
             )
         }
 
+        composable(Screen.MessageOptions.route) {
+            val chatId = Screen.MessageOptions.getChatId(it)
+            MessageOptionsScreen(
+                navController = navController,
+                chatId = chatId,
+            )
+        }
     }
 }
 

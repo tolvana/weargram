@@ -15,5 +15,13 @@ sealed class Screen(val route: String) {
                 ?: throw IllegalArgumentException("chatId argument missing.")
     }
 
+    object MessageOptions : Screen("messageOptions/{chatId}") {
+        fun buildRoute(chatId: Long): String = "messageOptions/${chatId}"
+        fun getChatId(entry: NavBackStackEntry): Long =
+            entry.arguments!!.getString("chatId")?.toLong()
+                ?: throw IllegalArgumentException("chatId argument missing.")
+
+    }
+
     //object CreateChat : Screen("createChat")
 }

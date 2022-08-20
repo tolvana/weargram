@@ -1,22 +1,31 @@
 package xyz.tolvanen.weargram.ui
 
 import android.util.Log
+import android.view.MotionEvent
+import android.view.View
+import android.view.View.OnTouchListener
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import org.drinkless.td.libcore.telegram.TdApi
 import org.drinkless.td.libcore.telegram.TdApi.Location
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.overlay.Marker
+import xyz.tolvanen.weargram.R
 
 @Composable
 fun MessageContent(message: TdApi.Message, viewModel: ChatViewModel, modifier: Modifier = Modifier) {
@@ -99,16 +108,23 @@ fun DocumentMessage(content: TdApi.MessageDocument, modifier: Modifier = Modifie
 
 @Composable
 fun LocationMessage(content: TdApi.MessageLocation, modifier: Modifier = Modifier) {
+
+    val context = LocalContext.current
     MapView(
         onLoad = {
             val position = GeoPoint(content.location.latitude, content.location.longitude)
             val marker = Marker(it)
             marker.position = position
-            marker.title = "Test Marker"
-            marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+            marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            marker.icon = ContextCompat.getDrawable(context, R.drawable.baseline_location_on_24)
+            it.zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
             it.overlays.add(marker)
-            it.invalidate()
+            it.setOnTouchListener { v, _ ->
+                v.performClick()
+                true
+            }
             it.controller.animateTo(position, 15.0, 0)
+            it.invalidate()
         }
     )
     Text("Location: lat ${content.location.latitude}, lon ${content.location.longitude}", modifier = modifier)

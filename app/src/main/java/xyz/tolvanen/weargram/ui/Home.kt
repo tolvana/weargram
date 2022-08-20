@@ -10,6 +10,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.MutableLiveData
@@ -141,7 +142,10 @@ val TdApi.Message.shortDescription: String
 
 @Composable
 fun ChatItem(chat: TdApi.Chat, onClick: () -> Unit = {}) {
-    Card(onClick = onClick) {
+    Card(
+        onClick = onClick,
+        backgroundPainter = ColorPainter(MaterialTheme.colors.surface),
+    ) {
         Row(
             modifier = Modifier.fillMaxSize(),
             horizontalArrangement = Arrangement.SpaceBetween,

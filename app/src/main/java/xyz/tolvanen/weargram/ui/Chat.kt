@@ -8,18 +8,23 @@ import android.util.Log
 import android.view.inputmethod.EditorInfo
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
@@ -28,9 +33,13 @@ import androidx.wear.input.RemoteInputIntentHelper
 import androidx.wear.input.wearableExtender
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.drinkless.td.libcore.telegram.TdApi
+import xyz.tolvanen.weargram.R
+import xyz.tolvanen.weargram.Screen
 import xyz.tolvanen.weargram.client.ChatProvider
 import xyz.tolvanen.weargram.client.MessageProvider
 import xyz.tolvanen.weargram.client.TelegramClient
@@ -149,7 +158,8 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
                     val input = remember { mutableStateOf("") }
                     val scope = rememberCoroutineScope()
                     MessageInput(
-                        input = input,
+                        navController = navController,
+                        chatId = chatId,
                         sendMessage = {
                             scope.launch {
                                 viewModel.sendMessageAsync(
@@ -185,33 +195,40 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
             LaunchedEffect(Unit) {
                 focusRequester.requestFocus()
             }
-
         }
-
-        //}
-
     }
-
 }
 
 
 @Composable
 fun MessageItem(message: TdApi.Message, viewModel: ChatViewModel) {
-    if (message.isOutgoing) {
 
-    }
-    Card(
-        onClick = { /*TODO*/ },
-        contentPadding = PaddingValues(0.dp)
-    ) {
-        MessageContent(message, viewModel, modifier = Modifier.padding(CardDefaults.ContentPadding))
-    }
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = if (message.isOutgoing) Alignment.CenterEnd else Alignment.CenterStart,
 
+        ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(0.8f),
+            onClick = { /*TODO*/ },
+            contentPadding = PaddingValues(0.dp),
+            backgroundPainter = ColorPainter(
+                if (message.isOutgoing) MaterialTheme.colors.primaryVariant else MaterialTheme.colors.surface
+            ),
+        ) {
+            MessageContent(
+                message,
+                viewModel,
+                modifier = Modifier.padding(CardDefaults.ContentPadding)
+            )
+        }
+    }
 }
 
 @Composable
 fun MessageInput(
-    input: MutableState<String> = remember { mutableStateOf("") },
+    navController: NavController,
+    chatId: Long,
     sendMessage: (String) -> Unit = {}
 ) {
 
@@ -220,40 +237,43 @@ fun MessageInput(
             it.data?.let { data ->
                 val results: Bundle = RemoteInput.getResultsFromIntent(data)
                 val activityInput: CharSequence? = results.getCharSequence("input")
-                input.value = activityInput.toString()
+                sendMessage(activityInput.toString())
             }
         }
 
-    Column() {
-        CompactButton(
+    Row(
+        modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Button(
             onClick = {
                 val intent: Intent = RemoteInputIntentHelper.createActionRemoteInputIntent()
                 val remoteInputs: List<RemoteInput> = listOf(
                     RemoteInput.Builder("input")
-                        .setLabel("write msg")
+                        .setLabel("Text message?")
                         .wearableExtender {
                             setEmojisAllowed(true)
                             setInputActionType(EditorInfo.IME_ACTION_DONE)
                         }.build()
                 )
-
                 RemoteInputIntentHelper.putRemoteInputsExtra(intent, remoteInputs)
-
                 launcher.launch(intent)
-
             }) {
-            Text("msg")
-
-        }
-        if (input.value != "") {
-            Text(text = input.value)
-            CompactButton(onClick = { sendMessage(input.value) }) {
-                Text(text = "snd")
-            }
-
+            Image(
+                painterResource(id = R.drawable.baseline_message_24),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+            )
         }
 
+        Button(
+            onClick = { navController.navigate(Screen.MessageOptions.buildRoute(chatId)) }
+        ) {
+            Image(
+                painterResource(id = R.drawable.baseline_more_horiz_24),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+            )
+        }
     }
 }
-
-
