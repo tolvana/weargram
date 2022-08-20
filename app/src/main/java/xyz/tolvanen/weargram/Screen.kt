@@ -1,6 +1,9 @@
 package xyz.tolvanen.weargram
 
 import androidx.navigation.NavBackStackEntry
+import java.net.URLDecoder
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 sealed class Screen(val route: String) {
 
@@ -20,6 +23,17 @@ sealed class Screen(val route: String) {
         fun getChatId(entry: NavBackStackEntry): Long =
             entry.arguments!!.getString("chatId")?.toLong()
                 ?: throw IllegalArgumentException("chatId argument missing.")
+
+    }
+
+    object Video : Screen("video/{path}") {
+        fun buildRoute(path: String): String =
+            "video/${URLEncoder.encode(path, StandardCharsets.UTF_8.toString())}"
+
+        fun getPath(entry: NavBackStackEntry): String = URLDecoder.decode(
+            entry.arguments!!.getString("path"),
+            StandardCharsets.UTF_8.toString()
+        )
 
     }
 

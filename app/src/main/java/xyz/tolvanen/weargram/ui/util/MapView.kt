@@ -1,4 +1,4 @@
-package xyz.tolvanen.weargram.ui
+package xyz.tolvanen.weargram.ui.util
 
 
 import androidx.compose.runtime.Composable

@@ -18,6 +18,7 @@ import xyz.tolvanen.weargram.theme.WeargramTheme
 import xyz.tolvanen.weargram.ui.chat.ChatScreen
 import xyz.tolvanen.weargram.ui.home.HomeScreen
 import xyz.tolvanen.weargram.ui.login.LoginScreen
+import xyz.tolvanen.weargram.ui.util.VideoView
 
 @Composable
 fun App() {
@@ -59,6 +60,11 @@ private fun MainNavHost(navController: NavHostController) {
                 navController = navController,
                 chatId = chatId,
             )
+        }
+
+        composable(Screen.Video.route) {
+            val path = Screen.Video.getPath(it)
+            VideoView(videoUri = path)
         }
     }
 }

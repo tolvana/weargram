@@ -9,6 +9,7 @@ import androidx.wear.compose.material.ScalingLazyListItemInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.forEach
 import kotlinx.coroutines.flow.map
 import org.drinkless.td.libcore.telegram.TdApi
 import xyz.tolvanen.weargram.client.ChatProvider
@@ -52,11 +53,13 @@ class ChatViewModel @Inject constructor(
         )
     }
 
-    fun fetchPhoto(photoMessage: TdApi.MessagePhoto): Flow<ImageBitmap?> {
-        val file = photoMessage.photo.sizes.last().photo
+    fun fetchFile(file: TdApi.File): Flow<String?> {
         return client.getFilePath(file)
+    }
+
+    fun fetchPhoto(photoMessage: TdApi.MessagePhoto): Flow<ImageBitmap?> {
+        return fetchFile(photoMessage.photo.sizes.last().photo)
             .map {
-                Log.d(TAG, "got filepath $it")
                 it?.let {
                     BitmapFactory.decodeFile(it)?.asImageBitmap()
                 }

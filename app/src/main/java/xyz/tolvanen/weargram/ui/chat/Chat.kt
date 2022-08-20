@@ -8,6 +8,7 @@ import android.view.inputmethod.EditorInfo
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.*
@@ -47,7 +48,7 @@ fun ChatScreen(navController: NavController, chatId: Long, viewModel: ChatViewMo
     ChatScaffold(navController, chatId, viewModel)
 }
 
-@OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterialApi::class)
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatViewModel) {
 
@@ -93,7 +94,6 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
 
             ) {
                 item {
-                    val input = remember { mutableStateOf("") }
                     val scope = rememberCoroutineScope()
                     MessageInput(
                         navController = navController,
@@ -108,17 +108,13 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
                                         ), false, false
                                     )
                                 ).await()
-
-                                input.value = ""
-                                // TODO: refresh history
-
                             }
                         }
                     )
                 }
                 items(messageIds.toList(), key = { it }) { id ->
                     messages[id]?.also { message ->
-                        MessageItem(message, viewModel)
+                        MessageItem(message, viewModel, navController)
                     }
                 }
 
@@ -139,16 +135,16 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
 
 
 @Composable
-fun MessageItem(message: TdApi.Message, viewModel: ChatViewModel) {
+fun MessageItem(message: TdApi.Message, viewModel: ChatViewModel, navController: NavController) {
 
     Box(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable { Log.d("Box", "was clicked") },
         contentAlignment = if (message.isOutgoing) Alignment.CenterEnd else Alignment.CenterStart,
 
         ) {
         Card(
-            modifier = Modifier.fillMaxWidth(0.8f),
-            onClick = { /*TODO*/ },
+            modifier = Modifier.fillMaxWidth(0.85f).wrapContentHeight().defaultMinSize(minHeight = 10.dp),
+            onClick = { Log.d("Card", "was clicked") },
             contentPadding = PaddingValues(0.dp),
             backgroundPainter = ColorPainter(
                 if (message.isOutgoing) MaterialTheme.colors.primaryVariant else MaterialTheme.colors.surface
@@ -157,6 +153,7 @@ fun MessageItem(message: TdApi.Message, viewModel: ChatViewModel) {
             MessageContent(
                 message,
                 viewModel,
+                navController,
                 modifier = Modifier.padding(CardDefaults.ContentPadding)
             )
         }
