@@ -13,12 +13,16 @@ import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintSet.Motion
 import dagger.hilt.android.AndroidEntryPoint
+import org.osmdroid.config.Configuration
 import xyz.tolvanen.weargram.ui.App
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        Configuration.getInstance().userAgentValue = BuildConfig.APPLICATION_ID
+
         setContent {
             App()
         }

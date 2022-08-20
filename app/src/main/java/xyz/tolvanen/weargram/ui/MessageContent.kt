@@ -10,10 +10,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import org.drinkless.td.libcore.telegram.TdApi
 import org.drinkless.td.libcore.telegram.TdApi.Location
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.overlay.Marker
 
 @Composable
 fun MessageContent(message: TdApi.Message, viewModel: ChatViewModel, modifier: Modifier = Modifier) {
@@ -96,6 +99,18 @@ fun DocumentMessage(content: TdApi.MessageDocument, modifier: Modifier = Modifie
 
 @Composable
 fun LocationMessage(content: TdApi.MessageLocation, modifier: Modifier = Modifier) {
+    MapView(
+        onLoad = {
+            val position = GeoPoint(content.location.latitude, content.location.longitude)
+            val marker = Marker(it)
+            marker.position = position
+            marker.title = "Test Marker"
+            marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+            it.overlays.add(marker)
+            it.invalidate()
+            it.controller.animateTo(position, 15.0, 0)
+        }
+    )
     Text("Location: lat ${content.location.latitude}, lon ${content.location.longitude}", modifier = modifier)
 }
 
