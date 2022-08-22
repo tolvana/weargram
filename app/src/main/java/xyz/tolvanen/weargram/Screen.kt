@@ -8,7 +8,7 @@ import java.nio.charset.StandardCharsets
 sealed class Screen(val route: String) {
 
     object Home : Screen("home")
-
+    object MainMenu : Screen("mainMenu")
     object Login : Screen("login")
 
     object Chat : Screen("chat/{chatId}") {

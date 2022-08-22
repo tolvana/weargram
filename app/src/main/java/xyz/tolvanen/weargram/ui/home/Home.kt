@@ -90,7 +90,7 @@ fun HomeScaffold(navController: NavController, viewModel: HomeViewModel) {
 
             item {
                 CompactButton(
-                    onClick = {},
+                    onClick = { navController.navigate(Screen.MainMenu.route) },
                     modifier = Modifier.padding(6.dp),
                     colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.surface)
                 ) {

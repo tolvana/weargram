@@ -31,6 +31,10 @@ private fun MainNavHost(navController: NavHostController) {
             HomeScreen(navController, hiltViewModel(it))
         }
 
+        composable(Screen.MainMenu.route) {
+            MainMenuScreen(navController, hiltViewModel(it))
+        }
+
         composable(Screen.Login.route) {
             LoginScreen(hiltViewModel(it)) {
                 navController.navigate(Screen.Home.route) {
