@@ -1,18 +1,13 @@
 package xyz.tolvanen.weargram.ui
 
-import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.rememberNavController
 import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
-import androidx.wear.compose.navigation.rememberSwipeDismissableNavHostState
 import xyz.tolvanen.weargram.Screen
 import xyz.tolvanen.weargram.theme.WeargramTheme
 import xyz.tolvanen.weargram.ui.chat.ChatScreen
@@ -54,9 +49,9 @@ private fun MainNavHost(navController: NavHostController) {
             )
         }
 
-        composable(Screen.MessageOptions.route) {
-            val chatId = Screen.MessageOptions.getChatId(it)
-            MessageOptionsScreen(
+        composable(Screen.MessageMenu.route) {
+            val chatId = Screen.MessageMenu.getChatId(it)
+            MessageMenuScreen(
                 navController = navController,
                 chatId = chatId,
             )

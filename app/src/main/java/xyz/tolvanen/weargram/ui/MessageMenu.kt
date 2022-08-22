@@ -12,9 +12,10 @@ import androidx.wear.compose.material.*
 import xyz.tolvanen.weargram.R
 
 @Composable
-fun MessageOptionsScreen(navController: NavController, chatId: Long) {
+fun MessageMenuScreen(navController: NavController, chatId: Long) {
 
     ScalingLazyColumn(
+        modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
         contentPadding = PaddingValues(top = 24.dp, bottom = 0.dp),
@@ -22,7 +23,7 @@ fun MessageOptionsScreen(navController: NavController, chatId: Long) {
     ) {
 
         item {
-            MessageOption(
+            MessageMenuItem(
                 title = "Sticker",
                 iconPainter = painterResource(id = R.drawable.baseline_emoji_emotions_24),
                 onClick = {}
@@ -30,7 +31,7 @@ fun MessageOptionsScreen(navController: NavController, chatId: Long) {
         }
 
         item {
-            MessageOption(
+            MessageMenuItem(
                 title = "Location",
                 iconPainter = painterResource(id = R.drawable.baseline_location_on_24),
                 onClick = {}
@@ -38,21 +39,19 @@ fun MessageOptionsScreen(navController: NavController, chatId: Long) {
         }
 
         item {
-            MessageOption(
+            MessageMenuItem(
                 title = "Audio message",
                 iconPainter = painterResource(id = R.drawable.baseline_mic_24),
                 onClick = {}
             )
         }
-
     }
-
 }
 
 @Composable
-fun MessageOption(title: String, iconPainter: Painter, onClick: () -> Unit) {
+fun MessageMenuItem(title: String, iconPainter: Painter, onClick: () -> Unit) {
     Chip(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(0.9f),
         onClick = onClick,
         label = { Text(title) },
         icon = { Icon(painter = iconPainter, contentDescription = title) },

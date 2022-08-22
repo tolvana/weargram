@@ -7,12 +7,10 @@ import android.util.Log
 import android.view.inputmethod.EditorInfo
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -21,7 +19,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -138,12 +135,17 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
 fun MessageItem(message: TdApi.Message, viewModel: ChatViewModel, navController: NavController) {
 
     Box(
-        modifier = Modifier.fillMaxWidth().clickable { Log.d("Box", "was clicked") },
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { Log.d("Box", "was clicked") },
         contentAlignment = if (message.isOutgoing) Alignment.CenterEnd else Alignment.CenterStart,
 
         ) {
         Card(
-            modifier = Modifier.fillMaxWidth(0.85f).wrapContentHeight().defaultMinSize(minHeight = 10.dp),
+            modifier = Modifier
+                .fillMaxWidth(0.85f)
+                .wrapContentHeight()
+                .defaultMinSize(minHeight = 10.dp),
             onClick = { Log.d("Card", "was clicked") },
             contentPadding = PaddingValues(0.dp),
             backgroundPainter = ColorPainter(
@@ -193,21 +195,28 @@ fun MessageInput(
                 )
                 RemoteInputIntentHelper.putRemoteInputsExtra(intent, remoteInputs)
                 launcher.launch(intent)
-            }) {
-            Image(
+            },
+            colors = ButtonDefaults.buttonColors(
+                backgroundColor = MaterialTheme.colors.primaryVariant,
+                contentColor = MaterialTheme.colors.onSurface
+            )
+        ) {
+            Icon(
                 painterResource(id = R.drawable.baseline_message_24),
                 contentDescription = null,
-                contentScale = ContentScale.Fit,
             )
         }
 
         Button(
-            onClick = { navController.navigate(Screen.MessageOptions.buildRoute(chatId)) }
+            onClick = { navController.navigate(Screen.MessageMenu.buildRoute(chatId)) },
+            colors = ButtonDefaults.buttonColors(
+                backgroundColor = MaterialTheme.colors.primaryVariant,
+                contentColor = MaterialTheme.colors.onSurface
+            )
         ) {
-            Image(
+            Icon(
                 painterResource(id = R.drawable.baseline_more_horiz_24),
                 contentDescription = null,
-                contentScale = ContentScale.Fit,
             )
         }
     }
