@@ -17,7 +17,6 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -130,7 +129,6 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
     }
 }
 
-
 @Composable
 fun MessageItem(message: TdApi.Message, viewModel: ChatViewModel, navController: NavController) {
 
@@ -141,16 +139,8 @@ fun MessageItem(message: TdApi.Message, viewModel: ChatViewModel, navController:
         contentAlignment = if (message.isOutgoing) Alignment.CenterEnd else Alignment.CenterStart,
 
         ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth(0.85f)
-                .wrapContentHeight()
-                .defaultMinSize(minHeight = 10.dp),
-            onClick = { Log.d("Card", "was clicked") },
-            contentPadding = PaddingValues(0.dp),
-            backgroundPainter = ColorPainter(
-                if (message.isOutgoing) MaterialTheme.colors.primaryVariant else MaterialTheme.colors.surface
-            ),
+        Box(
+            modifier = Modifier.fillMaxWidth(0.85f)
         ) {
             MessageContent(
                 message,

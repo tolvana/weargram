@@ -1,25 +1,20 @@
 package xyz.tolvanen.weargram.ui.util
 
-import android.graphics.Paint.Style
 import android.net.Uri
-import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.Player
-import com.google.android.exoplayer2.analytics.AnalyticsListener
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
 import com.google.android.exoplayer2.ui.StyledPlayerView
-import com.google.android.exoplayer2.video.VideoSize
 
 
 @Composable
-fun VideoView(videoUri: String) {
+fun VideoView(videoUri: String, repeat: Boolean = false) {
 
     // https://medium.com/backyard-programmers/media3-exoplayer-in-jetpack-compose-to-make-snapchat-spotlight-75e384e2ef56
 
@@ -36,6 +31,7 @@ fun VideoView(videoUri: String) {
                 .build()
             setMediaItem(media)
             playWhenReady = true
+            repeatMode = if (repeat) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
             prepare()
         }
     }
