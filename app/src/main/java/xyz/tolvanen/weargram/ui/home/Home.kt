@@ -1,7 +1,5 @@
 package xyz.tolvanen.weargram.ui.home
 
-import android.content.Context
-import android.text.format.DateUtils
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
@@ -142,14 +140,7 @@ fun ChatItem(chat: TdApi.Chat, onClick: () -> Unit = {}) {
             )
 
             // Time of last message
-            Text(
-                timestampToTime(
-                    chat.lastMessage?.date,
-                    LocalContext.current.resources.configuration.locales[0]
-                ) ?: "",
-                modifier = Modifier.padding(start = 2.dp),
-                style = MaterialTheme.typography.body1
-            )
+            DateTime(chat.lastMessage)
 
         }
         Row(horizontalArrangement = Arrangement.SpaceBetween) {
@@ -181,6 +172,37 @@ fun ChatItem(chat: TdApi.Chat, onClick: () -> Unit = {}) {
 
         }
     }
+}
+
+@Composable
+fun DateTime(message: TdApi.Message?) {
+    val locale = LocalContext.current.resources.configuration.locales[0]
+
+    val text = remember(message) {
+        message?.date?.let {
+            val date = Date(it.toLong() * 1000)
+            val yesterday = Calendar.getInstance().apply {
+                add(Calendar.DAY_OF_YEAR, -1)
+            }
+            val lastWeek = Calendar.getInstance().apply { add(Calendar.WEEK_OF_YEAR, -1) }
+            val lastYear = Calendar.getInstance().apply { add(Calendar.YEAR, -1) }
+
+            if (date.after(yesterday.time)) {
+                DateFormat.getTimeInstance(DateFormat.SHORT).format(date)
+            } else if (date.after(lastWeek.time)) {
+                SimpleDateFormat("EEE", locale).format(date)
+            } else if (date.after(lastYear.time)) {
+                SimpleDateFormat("dd MMM", locale).format(date)
+            } else {
+                DateFormat.getDateInstance(DateFormat.SHORT).format(date)
+            }
+        }
+    }
+    Text(
+        text ?: "",
+        modifier = Modifier.padding(start = 2.dp),
+        style = MaterialTheme.typography.body1
+    )
 }
 
 fun timestampToTime(timestampSeconds: Int?, locale: Locale): String? {

@@ -2,15 +2,17 @@ package xyz.tolvanen.weargram.ui.chat
 
 import android.content.Context
 import android.graphics.BitmapFactory
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.wear.compose.material.ScalingLazyListItemInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.*
 import org.drinkless.td.libcore.telegram.TdApi
 import xyz.tolvanen.weargram.client.ChatProvider
 import xyz.tolvanen.weargram.client.MessageProvider
@@ -29,9 +31,18 @@ class ChatViewModel @Inject constructor(
 
     private val screenWidth = context.resources.displayMetrics.widthPixels
 
+    private var _chatFlow = MutableStateFlow(TdApi.Chat())
+    val chatFlow: StateFlow<TdApi.Chat> get() = _chatFlow
+
     fun initialize(chatId: Long) {
         messageProvider.initialize(chatId)
         pullMessages()
+
+        chatProvider.chatData.onEach {
+            it[chatId]?.also { chat ->
+                _chatFlow.value = chat
+            }
+        }.launchIn(viewModelScope)
     }
 
     fun pullMessages() {
@@ -73,6 +84,5 @@ class ChatViewModel @Inject constructor(
                 }
             }
     }
-
 }
 

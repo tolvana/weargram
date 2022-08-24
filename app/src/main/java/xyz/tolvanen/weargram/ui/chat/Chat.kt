@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -29,6 +30,8 @@ import kotlinx.coroutines.launch
 import org.drinkless.td.libcore.telegram.TdApi
 import xyz.tolvanen.weargram.R
 import xyz.tolvanen.weargram.Screen
+import java.text.SimpleDateFormat
+import java.util.*
 
 @Composable
 fun ChatScreen(navController: NavController, chatId: Long, viewModel: ChatViewModel) {
@@ -108,9 +111,20 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
                         }
                     )
                 }
-                items(messageIds.toList(), key = { it }) { id ->
+                items(
+                    messageIds.zip(messageIds.drop(1) + listOf(null)),
+                    key = { it }) { (id, prevId) ->
                     messages[id]?.also { message ->
-                        MessageItem(message, viewModel, navController)
+
+                        val displayDate = messages[prevId]?.let { prevMessage ->
+                            val prevDate = Calendar.getInstance()
+                                .apply { time = Date(prevMessage.date.toLong() * 1000) }
+                            val thisDate = Calendar.getInstance()
+                                .apply { time = Date(message.date.toLong() * 1000) }
+                            thisDate.get(Calendar.DAY_OF_YEAR) != prevDate.get(Calendar.DAY_OF_YEAR)
+                        } ?: true
+
+                        MessageItem(message, viewModel, navController, displayDate = displayDate)
                     }
                 }
 
@@ -130,25 +144,46 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
 }
 
 @Composable
-fun MessageItem(message: TdApi.Message, viewModel: ChatViewModel, navController: NavController) {
+fun MessageItem(
+    message: TdApi.Message,
+    viewModel: ChatViewModel,
+    navController: NavController,
+    displayDate: Boolean = false
+) {
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { Log.d("Box", "was clicked") },
-        contentAlignment = if (message.isOutgoing) Alignment.CenterEnd else Alignment.CenterStart,
-
-        ) {
-        Box(
-            modifier = Modifier.fillMaxWidth(0.85f)
-        ) {
-            MessageContent(
-                message,
-                viewModel,
-                navController,
-                modifier = Modifier.padding(CardDefaults.ContentPadding)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        if (displayDate) {
+            val locale = LocalContext.current.resources.configuration.locales[0]
+            Text(
+                text = SimpleDateFormat(
+                    "dd MMMM",
+                    locale
+                ).format(Date(message.date.toLong() * 1000)),
+                style = MaterialTheme.typography.caption1,
+                modifier = Modifier.padding(bottom = 4.dp)
             )
         }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { Log.d("Box", "was clicked") },
+            contentAlignment = if (message.isOutgoing) Alignment.CenterEnd else Alignment.CenterStart,
+
+            ) {
+            Box(
+                modifier = Modifier.fillMaxWidth(0.85f)
+            ) {
+                MessageContent(
+                    message,
+                    viewModel,
+                    navController,
+                )
+            }
+        }
+
     }
 }
 

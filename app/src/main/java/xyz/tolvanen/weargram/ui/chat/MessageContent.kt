@@ -5,6 +5,11 @@ import android.media.MediaMetadataRetriever
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Done
+import androidx.compose.material.icons.outlined.DoneAll
+import androidx.compose.material.icons.outlined.Pending
+import androidx.compose.material.icons.outlined.SyncProblem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
@@ -27,6 +32,7 @@ import xyz.tolvanen.weargram.R
 import xyz.tolvanen.weargram.Screen
 import xyz.tolvanen.weargram.ui.util.MapView
 import xyz.tolvanen.weargram.ui.util.VideoView
+import java.text.DateFormat
 
 @Composable
 fun MessageContent(
@@ -39,17 +45,17 @@ fun MessageContent(
     Log.d("MessageContent", "top")
     Log.d("MessageContent", "kek")
     when (content) {
-        is TdApi.MessageText -> TextMessage(message, content, modifier)
+        is TdApi.MessageText -> TextMessage(message, content, viewModel, modifier)
         is TdApi.MessagePhoto -> PhotoMessage(message, content, viewModel, modifier)
-        is TdApi.MessageAudio -> AudioMessage(message, content, modifier)
+        is TdApi.MessageAudio -> AudioMessage(message, content, viewModel, modifier)
         is TdApi.MessageVideo -> VideoMessage(message, content, viewModel, navController, modifier)
         is TdApi.MessageSticker -> StickerMessage(message, content, viewModel, modifier)
-        is TdApi.MessageDocument -> DocumentMessage(message, content, modifier)
-        is TdApi.MessageLocation -> LocationMessage(message, content, modifier)
-        is TdApi.MessageAnimatedEmoji -> AnimatedEmojiMessage(message, content, modifier)
+        is TdApi.MessageDocument -> DocumentMessage(message, content, viewModel, modifier)
+        is TdApi.MessageLocation -> LocationMessage(message, content, viewModel, modifier)
+        is TdApi.MessageAnimatedEmoji -> AnimatedEmojiMessage(message, content, viewModel, modifier)
         is TdApi.MessageAnimation -> AnimationMessage(message, content, viewModel, modifier)
-        is TdApi.MessageCall -> CallMessage(message, content, modifier)
-        is TdApi.MessagePoll -> PollMessage(message, content, modifier)
+        is TdApi.MessageCall -> CallMessage(message, content, viewModel, modifier)
+        is TdApi.MessagePoll -> PollMessage(message, content, viewModel, modifier)
         else -> UnsupportedMessage(message, modifier)
     }
 }
@@ -71,12 +77,94 @@ fun MessageCard(
 
 
 @Composable
-fun TextMessage(message: TdApi.Message, content: TdApi.MessageText, modifier: Modifier = Modifier) {
+fun TextMessage(
+    message: TdApi.Message,
+    content: TdApi.MessageText,
+    viewModel: ChatViewModel,
+    modifier: Modifier = Modifier
+) {
     MessageCard(message) {
-        Text(
-            text = content.text.text, modifier = modifier, style = MaterialTheme.typography.body2
-        )
+
+        Column(
+            modifier = modifier.padding(CardDefaults.ContentPadding),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Text(
+                text = content.text.text, style = MaterialTheme.typography.body2
+            )
+
+            MessageInfo(message, viewModel)
+
+        }
     }
+}
+
+@Composable
+fun MessageInfo(message: TdApi.Message, viewModel: ChatViewModel) {
+    Row(
+        verticalAlignment = Alignment.Bottom,
+        horizontalArrangement = Arrangement.End,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Time(message.date)
+        if (message.isOutgoing) {
+            Status(message, viewModel)
+        }
+
+    }
+}
+
+@Composable
+fun Time(timestamp: Int) {
+    Text(
+        text = DateFormat.getTimeInstance(DateFormat.SHORT).format(timestamp.toLong() * 1000),
+        modifier = Modifier.padding(0.dp),
+        style = MaterialTheme.typography.caption1
+    )
+}
+
+@Composable
+fun Status(message: TdApi.Message, viewModel: ChatViewModel) {
+
+    val chat = viewModel.chatFlow.collectAsState()
+
+    val iconModifier = Modifier
+        .size(20.dp)
+        .padding(start = 2.dp)
+    when (message.sendingState) {
+        is TdApi.MessageSendingStatePending -> {
+            Icon(
+                imageVector = Icons.Outlined.Pending,
+                contentDescription = null,
+                iconModifier
+            )
+        }
+        is TdApi.MessageSendingStateFailed -> {
+            Icon(
+                imageVector = Icons.Outlined.SyncProblem,
+                contentDescription = null,
+                iconModifier
+            )
+        }
+        else -> {
+            val lastReadId = chat.value.lastReadOutboxMessageId
+            if ((message.interactionInfo?.viewCount ?: 0) > 0 || lastReadId >= message.id) {
+                Icon(
+                    imageVector = Icons.Outlined.DoneAll,
+                    contentDescription = null,
+                    iconModifier
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Outlined.Done,
+                    contentDescription = null,
+                    iconModifier
+                )
+
+            }
+        }
+    }
+
 }
 
 @Composable
@@ -100,7 +188,8 @@ fun PhotoMessage(
             }
             content.caption.text.takeIf { it.isNotEmpty() }?.let {
                 Text(
-                    text = it, modifier = modifier, style = MaterialTheme.typography.body2
+                    text = it, style = MaterialTheme.typography.body2,
+                    modifier = modifier.padding(CardDefaults.ContentPadding),
                 )
 
             }
@@ -112,11 +201,17 @@ fun PhotoMessage(
 
 @Composable
 fun AudioMessage(
-    message: TdApi.Message, content: TdApi.MessageAudio, modifier: Modifier = Modifier
+    message: TdApi.Message,
+    content: TdApi.MessageAudio,
+    viewModel: ChatViewModel,
+    modifier: Modifier = Modifier
 ) {
 
     MessageCard(message) {
-        Text("Audio", modifier = modifier)
+        Text(
+            "Audio",
+            modifier = modifier.padding(CardDefaults.ContentPadding),
+        )
     }
 }
 
@@ -177,7 +272,8 @@ fun VideoMessage(
 
             content.caption.text.takeIf { it.isNotEmpty() }?.let {
                 Text(
-                    text = it, modifier = modifier, style = MaterialTheme.typography.body2
+                    text = it, style = MaterialTheme.typography.body2,
+                    modifier = modifier.padding(CardDefaults.ContentPadding),
                 )
 
             }
@@ -201,23 +297,34 @@ fun StickerMessage(
             Image(
                 bitmap = bitmap, contentDescription = null
             )
-        } ?: MessageCard(message) { Text(content.sticker.emoji + " Sticker", modifier = modifier) }
+        } ?: MessageCard(message) {
+            Text(
+                content.sticker.emoji + " Sticker",
+                modifier = modifier.padding(CardDefaults.ContentPadding),
+            )
+        }
     }
 }
 
 @Composable
 fun DocumentMessage(
-    message: TdApi.Message, content: TdApi.MessageDocument, modifier: Modifier = Modifier
+    message: TdApi.Message,
+    content: TdApi.MessageDocument,
+    viewModel: ChatViewModel,
+    modifier: Modifier = Modifier
 ) {
     MessageCard(message) {
-        Text("file: " + content.document.fileName, modifier = modifier)
+        Text(
+            "file: " + content.document.fileName,
+            modifier = modifier.padding(CardDefaults.ContentPadding),
+        )
     }
 }
 
 @Composable
 fun LocationMessage(
     message: TdApi.Message,
-    content: TdApi.MessageLocation,
+    content: TdApi.MessageLocation, viewModel: ChatViewModel,
     modifier: Modifier = Modifier
 ) {
 
@@ -248,10 +355,16 @@ fun LocationMessage(
 
 @Composable
 fun AnimatedEmojiMessage(
-    message: TdApi.Message, content: TdApi.MessageAnimatedEmoji, modifier: Modifier = Modifier
+    message: TdApi.Message,
+    content: TdApi.MessageAnimatedEmoji,
+    viewModel: ChatViewModel,
+    modifier: Modifier = Modifier
 ) {
     MessageCard(message) {
-        Text(content.emoji, modifier = modifier)
+        Text(
+            content.emoji,
+            modifier = modifier.padding(CardDefaults.ContentPadding),
+        )
     }
 }
 
@@ -268,43 +381,46 @@ fun AnimationMessage(
     MessageCard(message) {
         path.value?.also {
             VideoView(videoUri = it, repeat = true)
-            //AndroidView(factory = { context ->
-            //    WebView(context).apply {
-            //        webViewClient = WebViewClient()
-            //        val data = "<body> <img src = \"${path}\"/></body>"
-            //        loadDataWithBaseURL("file:///android_asset/", data, "text/html", "UTF-8", null)
-            //    }
-
-            //})
-        } ?: run {
-            Text("Animation", modifier = modifier)
-        }
-
-    }
-
-    //    WebView webView = (WebView) findViewById(R.id.imageWebView);
-    //    String  data    = "<body> <img src = \""+ filePath+"\"/></body>";
-    //    // 'filePath' is the path of your .GIF file on SD card.
-    //   webView.loadDataWithBaseURL("file:///android_asset/",data,"text/html","UTF-8",null);
-}
-
-@Composable
-fun CallMessage(message: TdApi.Message, content: TdApi.MessageCall, modifier: Modifier = Modifier) {
-    MessageCard(message) {
-        Text("Call", modifier = modifier)
+        } ?: run { CircularProgressIndicator(modifier = modifier.padding(4.dp)) }
     }
 }
 
 @Composable
-fun PollMessage(message: TdApi.Message, content: TdApi.MessagePoll, modifier: Modifier = Modifier) {
+fun CallMessage(
+    message: TdApi.Message,
+    content: TdApi.MessageCall,
+    viewModel: ChatViewModel,
+    modifier: Modifier = Modifier
+) {
     MessageCard(message) {
-        Text("Poll", modifier = modifier)
+        Text(
+            "Call",
+            modifier = modifier.padding(CardDefaults.ContentPadding),
+        )
+    }
+}
+
+@Composable
+fun PollMessage(
+    message: TdApi.Message,
+    content: TdApi.MessagePoll,
+    viewModel: ChatViewModel,
+    modifier: Modifier = Modifier
+) {
+    MessageCard(message) {
+        Text(
+            "Poll",
+            modifier = modifier.padding(CardDefaults.ContentPadding),
+        )
     }
 }
 
 @Composable
 fun UnsupportedMessage(message: TdApi.Message, modifier: Modifier = Modifier) {
     MessageCard(message) {
-        Text("Unsupported message", modifier = modifier)
+        Text(
+            "Unsupported message",
+            modifier = modifier.padding(CardDefaults.ContentPadding),
+        )
     }
 }
