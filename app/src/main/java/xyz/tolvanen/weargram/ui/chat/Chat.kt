@@ -7,16 +7,22 @@ import android.util.Log
 import android.view.inputmethod.EditorInfo
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -54,6 +60,8 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
     val messageIds by viewModel.messageProvider.messageIds.collectAsState()
     val messages by viewModel.messageProvider.messageData.collectAsState()
 
+    val scrollDirection by viewModel.scrollDirectionFlow.collectAsState()
+
     val listState = rememberScalingLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
@@ -66,7 +74,6 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
             }
     }
 
-    //BottomSheetScaffold(sheetContent = {}) {
     Scaffold(
         positionIndicator = {
             PositionIndicator(
@@ -76,7 +83,9 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
         },
         vignette = { Vignette(vignettePosition = VignettePosition.TopAndBottom) },
     ) {
-        Column() {
+        Box(
+            modifier = Modifier.fillMaxSize()
+        ) {
 
             ScalingLazyColumn(
                 state = listState,
@@ -90,6 +99,7 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
                     }
                     .focusRequester(focusRequester)
                     .focusable()
+                    .nestedScroll(viewModel.scrollListener)
 
             ) {
                 item {
@@ -133,6 +143,28 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
                         // TODO: make sure this is not looped when end of chat history is reached
                         viewModel.pullMessages()
                     }
+                }
+            }
+
+
+            if (scrollDirection < 0) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight()
+                        .align(Alignment.BottomCenter)
+                        .clickable {
+                            coroutineScope.launch {
+                                listState.animateScrollToItem(0)
+                            }
+                        }
+                        .background(Color(0x44000000), CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.ExpandMore,
+                        contentDescription = null,
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    )
                 }
             }
 

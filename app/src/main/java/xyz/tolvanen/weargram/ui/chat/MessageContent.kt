@@ -42,8 +42,6 @@ fun MessageContent(
     modifier: Modifier = Modifier
 ) {
     val content = message.content
-    Log.d("MessageContent", "top")
-    Log.d("MessageContent", "kek")
     when (content) {
         is TdApi.MessageText -> TextMessage(message, content, viewModel, modifier)
         is TdApi.MessagePhoto -> PhotoMessage(message, content, viewModel, modifier)

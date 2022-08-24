@@ -2,10 +2,11 @@ package xyz.tolvanen.weargram.ui.chat
 
 import android.content.Context
 import android.graphics.BitmapFactory
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.wear.compose.material.ScalingLazyListItemInfo
@@ -17,7 +18,11 @@ import org.drinkless.td.libcore.telegram.TdApi
 import xyz.tolvanen.weargram.client.ChatProvider
 import xyz.tolvanen.weargram.client.MessageProvider
 import xyz.tolvanen.weargram.client.TelegramClient
+import java.lang.Float.max
+import java.lang.Float.min
 import javax.inject.Inject
+import kotlin.math.abs
+import kotlin.math.sign
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
@@ -84,5 +89,31 @@ class ChatViewModel @Inject constructor(
                 }
             }
     }
+
+    private var _scrollDirectionFlow = MutableStateFlow(1)
+    val scrollDirectionFlow: StateFlow<Int> get() = _scrollDirectionFlow
+
+    private var scrollOffset = 0f
+    private val threshold = 50f
+
+    val scrollListener = object : NestedScrollConnection {
+        override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+            if (available.y > 0) {
+                scrollOffset = max(scrollOffset, 0f)
+
+            } else if (available.y < 0) {
+                scrollOffset = min(scrollOffset, 0f)
+            }
+
+            scrollOffset += available.y
+
+            if (abs(scrollOffset) > threshold) {
+                _scrollDirectionFlow.value = sign(scrollOffset).toInt()
+            }
+
+            return super.onPreScroll(available, source)
+        }
+    }
+
 }
 
