@@ -2,6 +2,8 @@ package xyz.tolvanen.weargram.ui.chat
 
 import android.content.Context
 import android.graphics.BitmapFactory
+import android.media.AudioAttributes
+import android.media.MediaPlayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -58,6 +60,14 @@ class ChatViewModel @Inject constructor(
         return messageProvider.sendMessageAsync(0, 0, TdApi.MessageSendOptions(), content)
     }
 
+    fun getUser(id: Long): TdApi.User? = client.getUser(id)
+    fun getBasicGroup(id: Long): TdApi.BasicGroup? = client.getBasicGroup(id)
+    fun getSupergroup(id: Long): TdApi.Supergroup? = client.getSupergroup(id)
+
+    fun getUserInfo(id: Long): TdApi.UserFullInfo? = client.getUserInfo(id)
+    fun getBasicGroupInfo(id: Long): TdApi.BasicGroupFullInfo? = client.getBasicGroupInfo(id)
+    fun getSupergroupInfo(id: Long): TdApi.SupergroupFullInfo? = client.getSupergroupInfo(id)
+
     fun onStart(chatId: Long) {
         client.sendUnscopedRequest(TdApi.OpenChat(chatId))
     }
@@ -82,12 +92,28 @@ class ChatViewModel @Inject constructor(
         val photoSize = photoMessage.photo.sizes.dropWhile { it.width < screenWidth }.firstOrNull()
             ?: photoMessage.photo.sizes.last()
 
-        return fetchFile(photoSize.photo)
-            .map {
+        return fetchFile(photoSize.photo).map {
                 it?.let {
                     BitmapFactory.decodeFile(it)?.asImageBitmap()
                 }
             }
+    }
+
+    fun fetchAudio(content: TdApi.File): Flow<MediaPlayer?> {
+        return fetchFile(content).map {
+            it?.let {
+                MediaPlayer().apply {
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setContentType(AudioAttributes.CONTENT_TYPE_UNKNOWN)
+                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                            .build()
+                    )
+                    setDataSource(it)
+                    prepare()
+                }
+            }
+        }
     }
 
     private var _scrollDirectionFlow = MutableStateFlow(1)

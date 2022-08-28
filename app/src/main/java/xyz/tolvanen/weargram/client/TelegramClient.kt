@@ -108,5 +108,13 @@ class TelegramClient @Inject constructor(private val parameters: TdApi.TdlibPara
 
     }
 
+    fun getUser(id: Long): TdApi.User? = users[id]
+    fun getBasicGroup(id: Long): TdApi.BasicGroup? = basicGroups[id]
+    fun getSupergroup(id: Long): TdApi.Supergroup? = supergroups[id]
+
+    fun getUserInfo(id: Long): TdApi.UserFullInfo? = userInfos[id]
+    fun getBasicGroupInfo(id: Long): TdApi.BasicGroupFullInfo? = basicGroupInfos[id]
+    fun getSupergroupInfo(id: Long): TdApi.SupergroupFullInfo? = supergroupInfos[id]
+
 }
 

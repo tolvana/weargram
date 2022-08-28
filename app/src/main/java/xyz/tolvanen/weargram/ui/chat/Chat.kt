@@ -67,18 +67,15 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
     val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(listState) {
-        snapshotFlow { listState.layoutInfo.visibleItemsInfo }
-            .distinctUntilChanged()
-            .collect {
-                viewModel.updateVisibleItems(it)
-            }
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo }.distinctUntilChanged().collect {
+            viewModel.updateVisibleItems(it)
+        }
     }
 
     Scaffold(
         positionIndicator = {
             PositionIndicator(
-                scalingLazyListState = listState,
-                modifier = Modifier
+                scalingLazyListState = listState, modifier = Modifier
             )
         },
         vignette = { Vignette(vignettePosition = VignettePosition.TopAndBottom) },
@@ -87,8 +84,7 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
             modifier = Modifier.fillMaxSize()
         ) {
 
-            ScalingLazyColumn(
-                state = listState,
+            ScalingLazyColumn(state = listState,
                 reverseLayout = true,
                 modifier = Modifier
                     .onRotaryScrollEvent {
@@ -104,22 +100,17 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
             ) {
                 item {
                     val scope = rememberCoroutineScope()
-                    MessageInput(
-                        navController = navController,
-                        chatId = chatId,
-                        sendMessage = {
-                            scope.launch {
-                                viewModel.sendMessageAsync(
-                                    content = TdApi.InputMessageText(
-                                        TdApi.FormattedText(
-                                            it,
-                                            emptyArray()
-                                        ), false, false
-                                    )
-                                ).await()
-                            }
+                    MessageInput(navController = navController, chatId = chatId, sendMessage = {
+                        scope.launch {
+                            viewModel.sendMessageAsync(
+                                content = TdApi.InputMessageText(
+                                    TdApi.FormattedText(
+                                        it, emptyArray()
+                                    ), false, false
+                                )
+                            ).await()
                         }
-                    )
+                    })
                 }
                 items(
                     messageIds.zip(messageIds.drop(1) + listOf(null)),
@@ -134,7 +125,13 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
                             thisDate.get(Calendar.DAY_OF_YEAR) != prevDate.get(Calendar.DAY_OF_YEAR)
                         } ?: true
 
-                        MessageItem(message, viewModel, navController, displayDate = displayDate)
+                        MessageItem(
+                            message,
+                            messages[prevId],
+                            viewModel,
+                            navController,
+                            displayDate = displayDate
+                        )
                     }
                 }
 
@@ -148,18 +145,16 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
 
 
             if (scrollDirection < 0) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .wrapContentHeight()
-                        .align(Alignment.BottomCenter)
-                        .clickable {
-                            coroutineScope.launch {
-                                listState.animateScrollToItem(0)
-                            }
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+                    .align(Alignment.BottomCenter)
+                    .clickable {
+                        coroutineScope.launch {
+                            listState.animateScrollToItem(0)
                         }
-                        .background(Color(0x44000000), CircleShape)
-                ) {
+                    }
+                    .background(Color(0x44000000), CircleShape)) {
                     Icon(
                         imageVector = Icons.Outlined.ExpandMore,
                         contentDescription = null,
@@ -178,21 +173,41 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
 @Composable
 fun MessageItem(
     message: TdApi.Message,
+    previousMessage: TdApi.Message?,
     viewModel: ChatViewModel,
     navController: NavController,
     displayDate: Boolean = false
 ) {
 
+    val senderId = message.senderId
+    val name = if (senderId is TdApi.MessageSenderUser) {
+        viewModel.getUser(senderId.userId)?.let { it.firstName + " " + it.lastName }
+    } else null
+
+    val chat by viewModel.chatFlow.collectAsState()
+    val isGroupChat = (chat.type is TdApi.ChatTypeBasicGroup) || (chat.type is TdApi.ChatTypeSupergroup)
+
+    val sender = previousMessage?.senderId?.let {
+        if (senderId is TdApi.MessageSenderUser) {
+            if (((it is TdApi.MessageSenderUser && it.userId != senderId.userId)
+                || it is TdApi.MessageSenderChat
+                || displayDate)
+                && !message.isOutgoing
+                && isGroupChat
+            ) {
+                name
+            } else null
+        } else null
+    }
+
     Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (displayDate) {
             val locale = LocalContext.current.resources.configuration.locales[0]
             Text(
                 text = SimpleDateFormat(
-                    "dd MMMM",
-                    locale
+                    "dd MMMM", locale
                 ).format(Date(message.date.toLong() * 1000)),
                 style = MaterialTheme.typography.caption1,
                 modifier = Modifier.padding(bottom = 4.dp)
@@ -209,21 +224,16 @@ fun MessageItem(
                 modifier = Modifier.fillMaxWidth(0.85f)
             ) {
                 MessageContent(
-                    message,
-                    viewModel,
-                    navController,
+                    message, viewModel, navController, sender
                 )
             }
         }
-
     }
 }
 
 @Composable
 fun MessageInput(
-    navController: NavController,
-    chatId: Long,
-    sendMessage: (String) -> Unit = {}
+    navController: NavController, chatId: Long, sendMessage: (String) -> Unit = {}
 ) {
 
     val launcher =
@@ -243,17 +253,14 @@ fun MessageInput(
             onClick = {
                 val intent: Intent = RemoteInputIntentHelper.createActionRemoteInputIntent()
                 val remoteInputs: List<RemoteInput> = listOf(
-                    RemoteInput.Builder("input")
-                        .setLabel("Text message?")
-                        .wearableExtender {
-                            setEmojisAllowed(true)
-                            setInputActionType(EditorInfo.IME_ACTION_SEND)
-                        }.build()
+                    RemoteInput.Builder("input").setLabel("Text message?").wearableExtender {
+                        setEmojisAllowed(true)
+                        setInputActionType(EditorInfo.IME_ACTION_SEND)
+                    }.build()
                 )
                 RemoteInputIntentHelper.putRemoteInputsExtra(intent, remoteInputs)
                 launcher.launch(intent)
-            },
-            colors = ButtonDefaults.buttonColors(
+            }, colors = ButtonDefaults.buttonColors(
                 backgroundColor = MaterialTheme.colors.primaryVariant,
                 contentColor = MaterialTheme.colors.onSurface
             )
