@@ -12,6 +12,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import androidx.compose.ui.platform.LocalContext
@@ -116,6 +117,42 @@ fun HomeScaffold(navController: NavController, viewModel: HomeViewModel) {
     }
 }
 
+@Composable
+fun ShortText(text: String, modifier: Modifier = Modifier, color: Color = Color.Unspecified) {
+
+    Text(
+        text = text,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        style = MaterialTheme.typography.caption2,
+        modifier = modifier.padding(top = 4.dp),
+        color = color//Color(0xFF64B5F6)
+    )
+}
+
+@Composable
+fun ShortDescription(content: TdApi.MessageContent, modifier: Modifier = Modifier) {
+    val altColor = Color(0xFF4588BE)
+    when (content) {
+        is TdApi.MessageText -> ShortText(content.text.text, modifier)
+        is TdApi.MessagePhoto -> ShortText("Photo", modifier, color = altColor)
+        is TdApi.MessageAudio -> ShortText("Audio", modifier, color = altColor)
+        is TdApi.MessageVoiceNote -> ShortText("Voice note", modifier, color = altColor)
+        is TdApi.MessageVideo -> ShortText("Video", modifier, color = altColor)
+        is TdApi.MessageVideoNote -> ShortText("Video note", modifier, color = altColor)
+        is TdApi.MessageCall -> ShortText("Call", modifier, color = altColor)
+        is TdApi.MessageAnimation -> ShortText("GIF", modifier, color = altColor)
+        is TdApi.MessageAnimatedEmoji -> ShortText(content.emoji, modifier, color = altColor)
+        is TdApi.MessageLocation -> ShortText("Location", modifier, color = altColor)
+        is TdApi.MessageContact -> ShortText("Contact", modifier, color = altColor)
+        is TdApi.MessageDocument -> ShortText("Document", modifier, color = altColor)
+        is TdApi.MessagePoll -> ShortText("Poll", modifier, color = altColor)
+        is TdApi.MessageSticker -> ShortText(content.sticker.emoji + " Sticker", modifier, color = altColor)
+        else -> ShortText("Unsupported message", modifier, color = altColor)
+    }
+
+}
+
 val TdApi.Message.shortDescription: String
     get() = when (content.constructor) {
         TdApi.MessageText.CONSTRUCTOR -> (content as TdApi.MessageText).text.text
@@ -145,15 +182,9 @@ fun ChatItem(chat: TdApi.Chat, onClick: () -> Unit = {}) {
         }
         Row(horizontalArrangement = Arrangement.SpaceBetween) {
             // Last message content
-            Text(
-                text = chat.lastMessage?.shortDescription ?: "Empty history",
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.caption2,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(top = 4.dp)
-            )
+            chat.lastMessage?.content?.also {
+                ShortDescription(content = it, modifier = Modifier.weight(1f))
+            }
 
             // Unread status indicators
             Row(
@@ -203,27 +234,6 @@ fun DateTime(message: TdApi.Message?) {
         modifier = Modifier.padding(start = 2.dp),
         style = MaterialTheme.typography.body1
     )
-}
-
-fun timestampToTime(timestampSeconds: Int?, locale: Locale): String? {
-    return timestampSeconds?.let {
-        val date = Date(it.toLong() * 1000)
-        val yesterday = Calendar.getInstance().apply {
-            add(Calendar.DAY_OF_YEAR, -1)
-        }
-        val lastWeek = Calendar.getInstance().apply { add(Calendar.WEEK_OF_YEAR, -1) }
-        val lastYear = Calendar.getInstance().apply { add(Calendar.YEAR, -1) }
-
-        if (date.after(yesterday.time)) {
-            DateFormat.getTimeInstance(DateFormat.SHORT).format(date)
-        } else if (date.after(lastWeek.time)) {
-            SimpleDateFormat("EEE", locale).format(date)
-        } else if (date.after(lastYear.time)) {
-            SimpleDateFormat("dd MMM", locale).format(date)
-        } else {
-            DateFormat.getDateInstance(DateFormat.SHORT).format(date)
-        }
-    }
 }
 
 @Composable

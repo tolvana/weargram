@@ -93,10 +93,10 @@ class ChatViewModel @Inject constructor(
             ?: photoMessage.photo.sizes.last()
 
         return fetchFile(photoSize.photo).map {
-                it?.let {
-                    BitmapFactory.decodeFile(it)?.asImageBitmap()
-                }
+            it?.let {
+                BitmapFactory.decodeFile(it)?.asImageBitmap()
             }
+        }
     }
 
     fun fetchAudio(content: TdApi.File): Flow<MediaPlayer?> {

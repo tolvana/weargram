@@ -2,14 +2,11 @@ package xyz.tolvanen.weargram.ui.chat
 
 import android.content.Intent
 import android.graphics.BitmapFactory
-import android.media.AudioAttributes
 import android.media.MediaMetadataRetriever
-import android.media.MediaPlayer
 import android.net.Uri
 import android.os.CountDownTimer
 import android.util.Log
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
@@ -17,18 +14,18 @@ import androidx.compose.material.icons.outlined.Done
 import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.outlined.Pending
 import androidx.compose.material.icons.outlined.SyncProblem
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.ColorPainter
-import androidx.compose.ui.modifier.modifierLocalConsumer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -40,8 +37,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.startActivity
 import androidx.navigation.NavController
 import androidx.wear.compose.material.*
-import com.google.android.material.progressindicator.LinearProgressIndicator
-import kotlinx.coroutines.flow.distinctUntilChanged
 import org.drinkless.td.libcore.telegram.TdApi
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
@@ -58,43 +53,42 @@ fun MessageContent(
     message: TdApi.Message,
     viewModel: ChatViewModel,
     navController: NavController,
-    sender: String? = null,
     modifier: Modifier = Modifier
 ) {
 
     when (val content = message.content) {
-        is TdApi.MessageText -> TextMessage(message, content, viewModel, modifier, sender = sender)
+        is TdApi.MessageText -> TextMessage(message, content, viewModel, modifier)
         is TdApi.MessagePhoto -> PhotoMessage(
-            message, content, viewModel, modifier, sender = sender
+            message, content, viewModel, modifier
         )
         is TdApi.MessageAudio -> AudioMessage(
-            message, content, viewModel, modifier, sender = sender
+            message, content, viewModel, modifier
         )
-
         is TdApi.MessageVoiceNote -> VoiceNoteMessage(
-            message, content, viewModel, modifier, sender = sender
+            message, content, viewModel, modifier
         )
         is TdApi.MessageVideo -> VideoMessage(
-            message, content, viewModel, navController, modifier, sender = sender
+            message, content, viewModel, navController, modifier
         )
         is TdApi.MessageSticker -> StickerMessage(
-            message, content, viewModel, modifier, sender = sender
+            message, content, viewModel, modifier
         )
         is TdApi.MessageDocument -> DocumentMessage(
-            message, content, viewModel, modifier, sender = sender
+            message, content, viewModel, modifier
         )
         is TdApi.MessageLocation -> LocationMessage(
-            message, content, viewModel, modifier, sender = sender
+            message, content, viewModel, modifier
         )
         is TdApi.MessageAnimatedEmoji -> AnimatedEmojiMessage(
-            message, content, viewModel, modifier, sender = sender
+            message, content, viewModel, modifier
         )
         is TdApi.MessageAnimation -> AnimationMessage(
-            message, content, viewModel, modifier, sender = sender
+            message, content, viewModel, modifier
         )
-        is TdApi.MessageCall -> CallMessage(message, content, viewModel, modifier, sender = sender)
-        is TdApi.MessagePoll -> PollMessage(message, content, viewModel, modifier, sender = sender)
-        else -> UnsupportedMessage(message, modifier, sender = sender)
+        is TdApi.MessageCall -> CallMessage(message, content, viewModel, modifier)
+        is TdApi.MessagePoll -> PollMessage(message, content, viewModel, modifier)
+        is TdApi.MessageContact -> ContactMessage(message, content, viewModel, modifier)
+        else -> UnsupportedMessage(message, modifier)
     }
 }
 
@@ -230,7 +224,7 @@ fun FormattedText(text: TdApi.FormattedText, modifier: Modifier = Modifier) {
                 is TdApi.TextEntityTypeUrl -> {
                     addStyle(
                         style = SpanStyle(
-                            color = Color(0xff64B5F6), textDecoration = TextDecoration.Underline
+                            color = Color(0xFF64B5F6), textDecoration = TextDecoration.Underline
                         ), start = entity.offset, end = entity.offset + entity.length
                     )
 
@@ -244,7 +238,7 @@ fun FormattedText(text: TdApi.FormattedText, modifier: Modifier = Modifier) {
                 is TdApi.TextEntityTypeEmailAddress -> {
                     addStyle(
                         style = SpanStyle(
-                            color = Color(0xff64B5F6), textDecoration = TextDecoration.Underline
+                            color = Color(0xFF64B5F6), textDecoration = TextDecoration.Underline
                         ), start = entity.offset, end = entity.offset + entity.length
                     )
                     addStringAnnotation(
@@ -257,7 +251,7 @@ fun FormattedText(text: TdApi.FormattedText, modifier: Modifier = Modifier) {
                 is TdApi.TextEntityTypePhoneNumber -> {
                     addStyle(
                         style = SpanStyle(
-                            color = Color(0xff64B5F6), textDecoration = TextDecoration.Underline
+                            color = Color(0xFF64B5F6), textDecoration = TextDecoration.Underline
                         ), start = entity.offset, end = entity.offset + entity.length
                     )
                     addStringAnnotation(
@@ -315,26 +309,11 @@ fun FormattedText(text: TdApi.FormattedText, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun Sender(sender: String?) {
-    sender?.also {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 12.dp, top = 5.dp, bottom = 2.dp)
-        ) {
-            Text(sender)
-        }
-    }
-}
-
-
-@Composable
 fun TextMessage(
     message: TdApi.Message,
     content: TdApi.MessageText,
     viewModel: ChatViewModel,
     modifier: Modifier = Modifier,
-    sender: String?
 ) {
 
     MessageCard(message) {
@@ -342,7 +321,6 @@ fun TextMessage(
         Column(
             horizontalAlignment = Alignment.Start
         ) {
-            sender?.also { Text(text = it) }
             FormattedText(content.text)
             MessageInfo(message, viewModel)
         }
@@ -356,14 +334,11 @@ fun PhotoMessage(
     content: TdApi.MessagePhoto,
     viewModel: ChatViewModel,
     modifier: Modifier = Modifier,
-    sender: String?
 ) {
     val image = remember { viewModel.fetchPhoto(content) }.collectAsState(initial = null)
 
     MessageCard(message, contentPadding = PaddingValues(0.dp)) {
         Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Top) {
-
-            Sender(sender)
 
             image.value?.also { Image(bitmap = it, contentDescription = null) }
 
@@ -382,7 +357,6 @@ fun AudioMessage(
     content: TdApi.MessageAudio,
     viewModel: ChatViewModel,
     modifier: Modifier = Modifier,
-    sender: String?
 ) {
     // TODO: think about audio playback lifecycle
     val player =
@@ -393,7 +367,6 @@ fun AudioMessage(
 
 
     MessageCard(message) {
-        sender?.also { Text(text = it) }
         Box(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.Center
@@ -404,8 +377,7 @@ fun AudioMessage(
 
                         if (isPlaying.value) {
                             p.pause()
-                        }
-                        else {
+                        } else {
                             p.start()
                             object : CountDownTimer((p.duration - p.currentPosition).toLong(), 50) {
                                 override fun onTick(p0: Long) {
@@ -458,7 +430,6 @@ fun VoiceNoteMessage(
     content: TdApi.MessageVoiceNote,
     viewModel: ChatViewModel,
     modifier: Modifier = Modifier,
-    sender: String?
 ) {
     // TODO: think about audio playback lifecycle
     val player =
@@ -469,7 +440,6 @@ fun VoiceNoteMessage(
 
 
     MessageCard(message) {
-        sender?.also { Text(text = it) }
         Box(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.Center
@@ -480,8 +450,7 @@ fun VoiceNoteMessage(
 
                         if (isPlaying.value) {
                             p.pause()
-                        }
-                        else {
+                        } else {
                             p.start()
                             object : CountDownTimer((p.duration - p.currentPosition).toLong(), 50) {
                                 override fun onTick(p0: Long) {
@@ -535,7 +504,6 @@ fun VideoMessage(
     viewModel: ChatViewModel,
     navController: NavController,
     modifier: Modifier = Modifier,
-    sender: String?
 ) {
     val path =
         remember(content) { viewModel.fetchFile(content.video.video) }.collectAsState(initial = null)
@@ -544,8 +512,6 @@ fun VideoMessage(
         Column(
             modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Top
         ) {
-
-            Sender(sender)
 
             path.value?.also {
 
@@ -602,7 +568,6 @@ fun StickerMessage(
     content: TdApi.MessageSticker,
     viewModel: ChatViewModel,
     modifier: Modifier = Modifier,
-    sender: String?
 ) {
     val path =
         remember { viewModel.fetchFile(content.sticker.sticker) }.collectAsState(initial = null)
@@ -610,11 +575,9 @@ fun StickerMessage(
     path.value?.also {
         BitmapFactory.decodeFile(it)?.asImageBitmap()?.also { bitmap ->
             Column {
-                Sender(sender)
                 Image(bitmap = bitmap, contentDescription = null)
             }
         } ?: MessageCard(message) {
-            sender?.also { s -> Text(text = s) }
             Text(content.sticker.emoji + " Sticker")
         }
     }
@@ -626,10 +589,8 @@ fun DocumentMessage(
     content: TdApi.MessageDocument,
     viewModel: ChatViewModel,
     modifier: Modifier = Modifier,
-    sender: String?
 ) {
     MessageCard(message) {
-        sender?.also { Text(text = it) }
         Text("file: " + content.document.fileName)
     }
 }
@@ -640,13 +601,10 @@ fun LocationMessage(
     content: TdApi.MessageLocation,
     viewModel: ChatViewModel,
     modifier: Modifier = Modifier,
-    sender: String?
 ) {
 
     val context = LocalContext.current
     MessageCard(message, contentPadding = PaddingValues(0.dp)) {
-
-        Sender(sender)
 
         MapView(
             onLoad = {
@@ -676,10 +634,8 @@ fun AnimatedEmojiMessage(
     content: TdApi.MessageAnimatedEmoji,
     viewModel: ChatViewModel,
     modifier: Modifier = Modifier,
-    sender: String?
 ) {
     MessageCard(message) {
-        sender?.also { Text(text = it) }
         Text(content.emoji)
     }
 }
@@ -690,14 +646,11 @@ fun AnimationMessage(
     content: TdApi.MessageAnimation,
     viewModel: ChatViewModel,
     modifier: Modifier = Modifier,
-    sender: String?
 ) {
     val path =
         remember { viewModel.fetchFile(content.animation.animation) }.collectAsState(initial = null)
 
     MessageCard(message, contentPadding = PaddingValues(0.dp)) {
-
-        Sender(sender)
 
         path.value?.also {
             VideoView(videoUri = it, repeat = true)
@@ -711,10 +664,8 @@ fun CallMessage(
     content: TdApi.MessageCall,
     viewModel: ChatViewModel,
     modifier: Modifier = Modifier,
-    sender: String?
 ) {
     MessageCard(message) {
-        sender?.also { Text(text = it) }
         Text("Call")
     }
 }
@@ -725,18 +676,29 @@ fun PollMessage(
     content: TdApi.MessagePoll,
     viewModel: ChatViewModel,
     modifier: Modifier = Modifier,
-    sender: String?
 ) {
     MessageCard(message) {
-        sender?.also { Text(text = it) }
         Text("Poll")
     }
 }
 
 @Composable
-fun UnsupportedMessage(message: TdApi.Message, modifier: Modifier = Modifier, sender: String?) {
+fun ContactMessage(
+    message: TdApi.Message,
+    content: TdApi.MessageContact,
+    viewModel: ChatViewModel,
+    modifier: Modifier = Modifier,
+) {
     MessageCard(message) {
-        sender?.also { Text(text = it) }
+        val name = content.contact.let { it.firstName + " " + it.lastName }
+        val number = content.contact.phoneNumber
+        Text("Contact:\n $name, $number")
+    }
+}
+
+@Composable
+fun UnsupportedMessage(message: TdApi.Message, modifier: Modifier = Modifier) {
+    MessageCard(message) {
         Text("Unsupported message")
     }
 }

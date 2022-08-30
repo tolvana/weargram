@@ -3,7 +3,9 @@ package xyz.tolvanen.weargram.client
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -17,6 +19,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.drinkless.td.libcore.telegram.TdApi
 import org.drinkless.td.libcore.telegram.TdApi.MessageSenderUser
+import xyz.tolvanen.weargram.MainActivity
 import xyz.tolvanen.weargram.R
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -54,7 +57,7 @@ class NotificationProvider @Inject constructor(
             NotificationChannel(
                 NOTIFICATION_CHANNEL_ID,
                 "Messages",
-                NotificationManager.IMPORTANCE_HIGH
+                NotificationManager.IMPORTANCE_DEFAULT
             )
         )
 
@@ -68,7 +71,7 @@ class NotificationProvider @Inject constructor(
 
     private fun updateActiveNotifications(update: TdApi.UpdateActiveNotifications) {
 
-        Log.d(TAG, update.toString())
+        //Log.d(TAG, update.toString())
 
         update.groups.forEach { group ->
             groups[group.id] = group
@@ -80,7 +83,7 @@ class NotificationProvider @Inject constructor(
 
     private fun updateNotificationGroup(update: TdApi.UpdateNotificationGroup) {
 
-        Log.d(TAG, update.toString())
+        //Log.d(TAG, update.toString())
 
         groups[update.notificationGroupId]?.apply {
             type = update.type
@@ -110,7 +113,7 @@ class NotificationProvider @Inject constructor(
 
     private fun updateNotification(update: TdApi.UpdateNotification) {
 
-        Log.d(TAG, update.toString())
+        //Log.d(TAG, update.toString())
 
         groups[update.notificationGroupId]?.apply {
             val idx =
@@ -136,7 +139,7 @@ class NotificationProvider @Inject constructor(
             .map { it.message }
             .map { message ->
                 val text = textSummary(message.content)
-                val timestamp = message.date.toLong() * 1000
+                val timestamp = message.date * 1000L
                 val sender = when (val senderId = message.senderId) {
                     is MessageSenderUser -> Person.Builder()
                         .setName(
@@ -158,6 +161,25 @@ class NotificationProvider @Inject constructor(
                 NotificationCompat.MessagingStyle.Message(it.text, it.timestamp, it.sender)
             }
 
+        val markAsReadIntent = Intent().also {
+            it.action = "MARK_READ"
+            it.putExtra("chatId", group.chatId)
+            val msgs = messages.map { msg -> msg.message.id }.toLongArray()
+            Log.d(TAG, "putting ${msgs.size} messages")
+            it.putExtra("msgIds", msgs)
+        }
+
+        val markAsReadAction = NotificationCompat.Action
+            .Builder(
+                R.drawable.baseline_play_arrow_24,
+                "Mark as read",
+                PendingIntent.getService(context, 0, markAsReadIntent, 0)
+            )
+            //.addRemoteInput(RemoteInput.Builder("reply").run {setLabel("Reply")}.build())
+            .build()
+
+
+        val mainIntent = Intent(context, MainActivity::class.java)
 
         return NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
@@ -169,6 +191,14 @@ class NotificationProvider @Inject constructor(
                 .also { s ->
                     messageNotifications.forEach { s.addMessage(it) }
                 })
+            .setWhen((group.notifications.firstOrNull()?.date ?: 0) * 1000L)
+            .addAction(
+                R.drawable.baseline_play_arrow_24,
+                "Mark as read",
+                PendingIntent.getBroadcast(context, 0, markAsReadIntent, 0)
+            )
+            //.setContentIntent(PendingIntent.getActivity(context, 0, mainIntent, PendingIntent.FLAG_IMMUTABLE))
+            //.setAutoCancel(true)
             .setGroup(GROUP_ID)
             .build()
 
@@ -212,8 +242,8 @@ class NotificationProvider @Inject constructor(
             .setGroupSummary(true)
             .build()
 
-        val notifications =
-            groups.values.filter { it.totalCount > 0 }.map { Pair(it.id, buildNotification(it)) }
+        val notifications = groups.values
+            .filter { it.totalCount > 0 }.map { Pair(it.id, buildNotification(it)) }
 
         NotificationManagerCompat.from(context).apply {
             notifications.forEach { notify(it.first, it.second) }

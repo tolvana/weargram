@@ -170,6 +170,18 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
 }
 
 @Composable
+fun Sender(sender: String?, modifier: Modifier = Modifier) {
+    sender?.also {
+        Box(
+            modifier = modifier
+                .padding(start = 10.dp, top = 4.dp, bottom = 4.dp)
+        ) {
+            Text(sender)
+        }
+    }
+}
+
+@Composable
 fun MessageItem(
     message: TdApi.Message,
     previousMessage: TdApi.Message?,
@@ -184,13 +196,14 @@ fun MessageItem(
     } else null
 
     val chat by viewModel.chatFlow.collectAsState()
-    val isGroupChat = (chat.type is TdApi.ChatTypeBasicGroup) || (chat.type is TdApi.ChatTypeSupergroup)
+    val isGroupChat =
+        (chat.type is TdApi.ChatTypeBasicGroup) || (chat.type is TdApi.ChatTypeSupergroup)
 
     val sender = previousMessage?.senderId?.let {
         if (senderId is TdApi.MessageSenderUser) {
             if (((it is TdApi.MessageSenderUser && it.userId != senderId.userId)
-                || it is TdApi.MessageSenderChat
-                || displayDate)
+                        || it is TdApi.MessageSenderChat
+                        || displayDate)
                 && !message.isOutgoing
                 && isGroupChat
             ) {
@@ -212,6 +225,17 @@ fun MessageItem(
                 modifier = Modifier.padding(bottom = 4.dp)
             )
         }
+
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Sender(
+                sender,
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .clickable {
+                        Log.d("Chat", "User was clicked")
+                    }
+            )
+        }
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -222,9 +246,7 @@ fun MessageItem(
             Box(
                 modifier = Modifier.fillMaxWidth(0.85f)
             ) {
-                MessageContent(
-                    message, viewModel, navController, sender
-                )
+                MessageContent(message, viewModel, navController)
             }
         }
     }
