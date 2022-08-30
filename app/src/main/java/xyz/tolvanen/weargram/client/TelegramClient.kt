@@ -27,7 +27,7 @@ class TelegramClient @Inject constructor(private val parameters: TdApi.TdlibPara
 
     private val resultHandler = Client.ResultHandler {
         if (it is TdApi.Update)
-            mainScope.launch { _updateFlow.emit(it) }
+            defaultScope.launch { _updateFlow.emit(it) }
 
         when (it) {
             is TdApi.UpdateUser -> {
@@ -62,7 +62,7 @@ class TelegramClient @Inject constructor(private val parameters: TdApi.TdlibPara
     }
 
     private val requestScope = CoroutineScope(Dispatchers.IO)
-    private val mainScope = CoroutineScope(Dispatchers.Main)
+    private val defaultScope = CoroutineScope(Dispatchers.Default)
 
     fun sendUnscopedRequest(request: TdApi.Function) {
             client.send(request) {}

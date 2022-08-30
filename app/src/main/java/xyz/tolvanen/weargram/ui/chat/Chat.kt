@@ -143,7 +143,6 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
                 }
             }
 
-
             if (scrollDirection < 0) {
                 Box(modifier = Modifier
                     .fillMaxWidth()

@@ -63,7 +63,7 @@ class NotificationService : Service() {
     }
 
     companion object {
-        private const val FOREGROUND_NOTIFICATION_CHANNEL_ID = "weargram"
+        private const val FOREGROUND_NOTIFICATION_CHANNEL_ID = "weargram_foreground"
         private const val FOREGROUND_NOTIFICATION_ID = 97
     }
 }

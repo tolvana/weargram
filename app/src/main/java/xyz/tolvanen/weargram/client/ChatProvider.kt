@@ -43,7 +43,7 @@ class ChatProvider @Inject constructor(private val client: TelegramClient) {
     init {
 
         client.updateFlow.onEach {
-            Log.d(TAG, it.toString())
+            //Log.d(TAG, it.toString())
             when (it) {
                 is TdApi.UpdateChatPosition -> {
                     updateChatPositions(it.chatId, arrayOf(it.position))
@@ -183,5 +183,9 @@ class ChatProvider @Inject constructor(private val client: TelegramClient) {
                 }
         }
         updateChats()
+    }
+
+    fun getChat(chatId: Long): TdApi.Chat? {
+        return _chatData.value[chatId]
     }
 }
