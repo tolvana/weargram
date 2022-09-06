@@ -1,6 +1,7 @@
 package xyz.tolvanen.weargram.ui.chat
 
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
 import android.net.Uri
@@ -9,11 +10,6 @@ import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Done
-import androidx.compose.material.icons.outlined.DoneAll
-import androidx.compose.material.icons.outlined.Pending
-import androidx.compose.material.icons.outlined.SyncProblem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +40,7 @@ import org.osmdroid.views.overlay.Marker
 import xyz.tolvanen.weargram.R
 import xyz.tolvanen.weargram.Screen
 import xyz.tolvanen.weargram.ui.util.MapView
+import xyz.tolvanen.weargram.ui.util.MessageStatusIcon
 import xyz.tolvanen.weargram.ui.util.VideoView
 import java.text.DateFormat
 
@@ -70,6 +67,9 @@ fun MessageContent(
         is TdApi.MessageVideo -> VideoMessage(
             message, content, viewModel, navController, modifier
         )
+        is TdApi.MessageVideoNote -> VideoNoteMessage(
+            message, content, viewModel, navController, modifier
+        )
         is TdApi.MessageSticker -> StickerMessage(
             message, content, viewModel, modifier
         )
@@ -88,6 +88,37 @@ fun MessageContent(
         is TdApi.MessageCall -> CallMessage(message, content, viewModel, modifier)
         is TdApi.MessagePoll -> PollMessage(message, content, viewModel, modifier)
         is TdApi.MessageContact -> ContactMessage(message, content, viewModel, modifier)
+        is TdApi.MessageBasicGroupChatCreate -> {}
+        is TdApi.MessageChatAddMembers -> {}
+        is TdApi.MessageChatChangePhoto -> {}
+        is TdApi.MessageChatJoinByLink -> {}
+        is TdApi.MessageChatJoinByRequest -> {}
+        is TdApi.MessageChatSetTheme -> {}
+        is TdApi.MessageChatSetTtl -> {}
+        is TdApi.MessageChatUpgradeFrom -> {}
+        is TdApi.MessageChatUpgradeTo -> {}
+        is TdApi.MessageContactRegistered -> {}
+        is TdApi.MessageCustomServiceAction -> {}
+        is TdApi.MessageDice -> {}
+        is TdApi.MessageExpiredPhoto -> {}
+        is TdApi.MessageExpiredVideo -> {}
+        is TdApi.MessageGame -> {}
+        is TdApi.MessageGameScore -> {}
+        is TdApi.MessageInviteVideoChatParticipants -> {}
+        is TdApi.MessageInvoice -> {}
+        is TdApi.MessagePassportDataReceived -> {}
+        is TdApi.MessagePassportDataSent -> {}
+        is TdApi.MessagePaymentSuccessful -> {}
+        is TdApi.MessagePaymentSuccessfulBot -> {}
+        is TdApi.MessagePinMessage -> {}
+        is TdApi.MessageProximityAlertTriggered -> {}
+        is TdApi.MessageScreenshotTaken -> {}
+        is TdApi.MessageSupergroupChatCreate -> {}
+        is TdApi.MessageVenue -> {}
+        is TdApi.MessageVideoChatEnded -> {}
+        is TdApi.MessageVideoChatScheduled -> {}
+        is TdApi.MessageVideoChatStarted -> {}
+        is TdApi.MessageWebsiteConnected -> {}
         else -> UnsupportedMessage(message, modifier)
     }
 }
@@ -110,6 +141,8 @@ fun MessageCard(
 
 @Composable
 fun MessageInfo(message: TdApi.Message, viewModel: ChatViewModel) {
+    val chat = viewModel.chatFlow.collectAsState()
+
     Row(
         verticalAlignment = Alignment.Bottom,
         horizontalArrangement = Arrangement.End,
@@ -123,7 +156,13 @@ fun MessageInfo(message: TdApi.Message, viewModel: ChatViewModel) {
             )
         Time(message.date)
         if (message.isOutgoing) {
-            Status(message, viewModel)
+            MessageStatusIcon(
+                message,
+                chat.value,
+                modifier = Modifier
+                    .size(20.dp)
+                    .padding(start = 2.dp)
+            )
         }
 
     }
@@ -136,32 +175,6 @@ fun Time(timestamp: Int) {
         modifier = Modifier.padding(0.dp),
         style = MaterialTheme.typography.caption1
     )
-}
-
-@Composable
-fun Status(message: TdApi.Message, viewModel: ChatViewModel) {
-
-    val chat = viewModel.chatFlow.collectAsState()
-
-    val iconModifier = Modifier
-        .size(20.dp)
-        .padding(start = 2.dp)
-    when (message.sendingState) {
-        is TdApi.MessageSendingStatePending -> {
-            Icon(imageVector = Icons.Outlined.Pending, contentDescription = null, iconModifier)
-        }
-        is TdApi.MessageSendingStateFailed -> {
-            Icon(imageVector = Icons.Outlined.SyncProblem, contentDescription = null, iconModifier)
-        }
-        else -> {
-            val lastReadId = chat.value.lastReadOutboxMessageId
-            if ((message.interactionInfo?.viewCount ?: 0) > 0 || lastReadId >= message.id) {
-                Icon(imageVector = Icons.Outlined.DoneAll, contentDescription = null, iconModifier)
-            } else {
-                Icon(imageVector = Icons.Outlined.Done, contentDescription = null, iconModifier)
-            }
-        }
-    }
 }
 
 @Composable
@@ -335,12 +348,29 @@ fun PhotoMessage(
     viewModel: ChatViewModel,
     modifier: Modifier = Modifier,
 ) {
+    val thumbnail = remember {
+        content.photo.minithumbnail?.let { thumbnail ->
+            val data = thumbnail.data
+            val aspectRatio = thumbnail.width.toFloat() / thumbnail.height.toFloat()
+            val bmp = BitmapFactory.decodeByteArray(data, 0, data.size)
+            Bitmap.createScaledBitmap(bmp, 400, (400 / aspectRatio).toInt(), true).asImageBitmap()
+        }
+    }
     val image = remember { viewModel.fetchPhoto(content) }.collectAsState(initial = null)
 
     MessageCard(message, contentPadding = PaddingValues(0.dp)) {
         Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Top) {
 
             image.value?.also { Image(bitmap = it, contentDescription = null) }
+                ?: run {
+                    Box {
+                        thumbnail?.also { tn ->
+                            Image(bitmap = tn, contentDescription = null)
+                        }
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+
+                    }
+                }
 
             content.caption.text.takeIf { it.isNotEmpty() }?.let {
                 FormattedText(
@@ -508,6 +538,23 @@ fun VideoMessage(
     val path =
         remember(content) { viewModel.fetchFile(content.video.video) }.collectAsState(initial = null)
 
+    val frame = remember(path) {
+        path.value?.let {
+            MediaMetadataRetriever().apply {
+                setDataSource(it)
+            }.getFrameAtIndex(0)?.asImageBitmap()
+        }
+    }
+
+    val thumbnail = remember {
+        content.video.minithumbnail?.let { thumbnail ->
+            val data = thumbnail.data
+            val aspectRatio = thumbnail.width.toFloat() / thumbnail.height.toFloat()
+            val bmp = BitmapFactory.decodeByteArray(data, 0, data.size)
+            Bitmap.createScaledBitmap(bmp, 400, (400 / aspectRatio).toInt(), true).asImageBitmap()
+        }
+    }
+
     MessageCard(message, contentPadding = PaddingValues(0.dp)) {
         Column(
             modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Top
@@ -515,12 +562,9 @@ fun VideoMessage(
 
             path.value?.also {
 
-                // TODO: Fetch the frame in a more intelligent fashion
-                // SUS! Often causes crashes. Maybe just show thumbnail instead
                 MediaMetadataRetriever().apply {
                     setDataSource(it)
                 }.getFrameAtIndex(0)?.asImageBitmap()?.also { frame ->
-
                     Box {
                         Image(
                             frame,
@@ -545,18 +589,107 @@ fun VideoMessage(
                             )
                         }
                     }
+
+
                 }
-            } ?: CircularProgressIndicator(
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .padding(4.dp)
-            )
+            } ?: run {
+                Box {
+
+                    thumbnail?.also { tn ->
+                        Image(bitmap = tn, contentDescription = null)
+                    }
+
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(4.dp)
+                    )
+                }
+
+            }
 
             content.caption.text.takeIf { it.isNotEmpty() }?.let {
                 Text(
                     text = it, style = MaterialTheme.typography.body2,
                     modifier = modifier.padding(CardDefaults.ContentPadding),
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun VideoNoteMessage(
+    message: TdApi.Message,
+    content: TdApi.MessageVideoNote,
+    viewModel: ChatViewModel,
+    navController: NavController,
+    modifier: Modifier = Modifier,
+) {
+    val path =
+        remember(content) { viewModel.fetchFile(content.videoNote.video) }.collectAsState(initial = null)
+
+
+    val thumbnail = remember {
+        content.videoNote.minithumbnail?.let { thumbnail ->
+            val data = thumbnail.data
+            val aspectRatio = thumbnail.width.toFloat() / thumbnail.height.toFloat()
+            val bmp = BitmapFactory.decodeByteArray(data, 0, data.size)
+            Bitmap.createScaledBitmap(bmp, 400, (400 / aspectRatio).toInt(), true).asImageBitmap()
+        }
+    }
+
+    MessageCard(message, contentPadding = PaddingValues(0.dp)) {
+        Column(
+            modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Top
+        ) {
+
+            path.value?.also {
+
+                MediaMetadataRetriever().apply {
+                    setDataSource(it)
+                }.getFrameAtIndex(0)?.asImageBitmap()?.also { frame ->
+                    Box {
+                        Image(
+                            frame,
+                            contentDescription = null,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+
+                        CompactButton(
+                            onClick = {
+                                navController.navigate(Screen.Video.buildRoute(it))
+                            }, colors = ButtonDefaults.buttonColors(
+                                backgroundColor = Color(
+                                    0x7E000000
+                                )
+                            ), modifier = Modifier.align(Alignment.Center)
+
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.baseline_play_arrow_24),
+                                contentDescription = null,
+                                modifier = Modifier.align(Alignment.Center)
+                            )
+                        }
+                    }
+
+
+                }
+            } ?: run {
+                Box {
+
+                    thumbnail?.also { tn ->
+                        Image(bitmap = tn, contentDescription = null)
+                    }
+
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(4.dp)
+                    )
+                }
+
             }
         }
     }

@@ -176,7 +176,10 @@ fun Sender(sender: String?, modifier: Modifier = Modifier) {
             modifier = modifier
                 .padding(start = 10.dp, top = 4.dp, bottom = 4.dp)
         ) {
-            Text(sender)
+            Text(
+                sender,
+                style = MaterialTheme.typography.body2
+            )
         }
     }
 }

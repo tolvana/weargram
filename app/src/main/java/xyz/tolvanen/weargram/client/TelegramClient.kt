@@ -15,6 +15,9 @@ class TelegramClient @Inject constructor(private val parameters: TdApi.TdlibPara
     private val _updateFlow = MutableSharedFlow<TdApi.Update>()
     val updateFlow: SharedFlow<TdApi.Update> get() = _updateFlow
 
+    private val _me = MutableStateFlow<Long?>(null)
+    val me: StateFlow<Long?> get() = _me
+
     val users = ConcurrentHashMap<Long, TdApi.User>()
     val basicGroups = ConcurrentHashMap<Long, TdApi.BasicGroup>()
     val supergroups = ConcurrentHashMap<Long, TdApi.Supergroup>()
@@ -23,13 +26,18 @@ class TelegramClient @Inject constructor(private val parameters: TdApi.TdlibPara
     val basicGroupInfos = ConcurrentHashMap<Long, TdApi.BasicGroupFullInfo>()
     val supergroupInfos = ConcurrentHashMap<Long, TdApi.SupergroupFullInfo>()
 
+
     private val TAG = "TelegramClient"
 
     private val resultHandler = Client.ResultHandler {
         if (it is TdApi.Update)
             defaultScope.launch { _updateFlow.emit(it) }
 
+
         when (it) {
+            is TdApi.UpdateOption -> {
+                updateOption(it)
+            }
             is TdApi.UpdateUser -> {
                 users[it.user.id] = it.user
             }
@@ -50,6 +58,14 @@ class TelegramClient @Inject constructor(private val parameters: TdApi.TdlibPara
             }
             is TdApi.UpdateSupergroupFullInfo -> {
                 supergroupInfos[it.supergroupId] = it.supergroupFullInfo
+            }
+        }
+    }
+
+    private fun updateOption(option: TdApi.UpdateOption) {
+        when (option.name) {
+            "my_id" -> {
+                _me.value = (option.value as TdApi.OptionValueInteger).value
             }
         }
     }
