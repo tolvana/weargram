@@ -66,12 +66,16 @@ private fun MainNavHost(navController: NavHostController) {
         }
 
         composable(Screen.Info.route) {
-            Screen.MessageMenu.getChatId(it)?.also { chatId ->
-                InfoScreen(
-                    navController = navController,
-                    userId = chatId,
-                    viewModel = hiltViewModel(it)
-                )
+            Screen.Info.getType(it)?.also { type ->
+                Screen.Info.getId(it)?.also {id ->
+                    InfoScreen(
+                        navController = navController,
+                        type = type,
+                        id = id,
+                        viewModel = hiltViewModel(it)
+                    )
+
+                }
             }
         }
 

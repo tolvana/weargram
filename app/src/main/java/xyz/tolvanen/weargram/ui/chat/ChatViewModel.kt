@@ -41,6 +41,8 @@ class ChatViewModel @Inject constructor(
     private var _chatFlow = MutableStateFlow(TdApi.Chat())
     val chatFlow: StateFlow<TdApi.Chat> get() = _chatFlow
 
+    private var startVisible = false
+
     fun initialize(chatId: Long) {
         messageProvider.initialize(chatId)
         pullMessages()
@@ -60,7 +62,7 @@ class ChatViewModel @Inject constructor(
         return messageProvider.sendMessageAsync(0, 0, TdApi.MessageSendOptions(), content)
     }
 
-    fun getUser(id: Long): TdApi.User? = client.getUser(id)
+    fun getUser(id: Long?): TdApi.User? = id?.let { client.getUser(it) }
     fun getBasicGroup(id: Long): TdApi.BasicGroup? = client.getBasicGroup(id)
     fun getSupergroup(id: Long): TdApi.Supergroup? = client.getSupergroup(id)
 
@@ -80,6 +82,8 @@ class ChatViewModel @Inject constructor(
         messageProvider.updateSeenItems(
             visibleItems.map { it.key }.filterIsInstance<Long>()
         )
+
+        startVisible = visibleItems.map { it.index }.contains(0)
     }
 
     fun fetchFile(file: TdApi.File): Flow<String?> {

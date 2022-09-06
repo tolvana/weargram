@@ -24,11 +24,13 @@ sealed class Screen(val route: String) {
 
     }
 
-    object Info : Screen("info/{chatId}") {
-        fun buildRoute(chatId: Long): String = "info/${chatId}"
-        fun getChatId(entry: NavBackStackEntry): Long? =
-            entry.arguments?.getString("chatId")?.toLong()
+    object Info : Screen("info/{type}/{id}") {
+        fun buildRoute(type: String, id: Long): String = "info/$type/$id"
+        fun getId(entry: NavBackStackEntry): Long? =
+            entry.arguments?.getString("id")?.toLong()
 
+        fun getType(entry: NavBackStackEntry): String? =
+            entry.arguments?.getString("type")
 
     }
 
@@ -42,6 +44,5 @@ sealed class Screen(val route: String) {
         )
 
     }
-
     //object CreateChat : Screen("createChat")
 }

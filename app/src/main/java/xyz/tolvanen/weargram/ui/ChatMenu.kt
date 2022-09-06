@@ -92,7 +92,7 @@ fun UserInfo(userId: Long, navController: NavController) {
     MessageMenuItem(
         title = "User Info",
         iconPainter = painterResource(id = R.drawable.baseline_info_24),
-        onClick = { navController.navigate(Screen.Info.buildRoute(userId)) }
+        onClick = { navController.navigate(Screen.Info.buildRoute("user", userId)) }
     )
 }
 
@@ -101,7 +101,7 @@ fun GroupInfo(groupId: Long, navController: NavController) {
     MessageMenuItem(
         title = "Group Info",
         iconPainter = painterResource(id = R.drawable.baseline_info_24),
-        onClick = {}//{ navController.navigate(Screen.Info.buildGroupRoute(groupId)) }
+        onClick = { navController.navigate(Screen.Info.buildRoute("group", groupId)) }
     )
 }
 
@@ -110,7 +110,7 @@ fun ChannelInfo(channelId: Long, navController: NavController) {
     MessageMenuItem(
         title = "Channel Info",
         iconPainter = painterResource(id = R.drawable.baseline_info_24),
-        onClick = {}//{ navController.navigate(Screen.Info.buildChannelRoute(channelId)) }
+        onClick = { navController.navigate(Screen.Info.buildRoute("channel", channelId)) }
     )
 }
 

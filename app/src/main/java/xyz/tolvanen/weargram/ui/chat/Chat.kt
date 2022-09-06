@@ -96,6 +96,7 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
                     .focusRequester(focusRequester)
                     .focusable()
                     .nestedScroll(viewModel.scrollListener)
+                    .fillMaxWidth()
 
             ) {
                 item {
@@ -143,7 +144,13 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
                 }
             }
 
-            if (scrollDirection < 0) {
+            val nearBottom by remember {
+                derivedStateOf {
+                    listState.layoutInfo.visibleItemsInfo.map { it.index}.contains(0)
+                }
+            }
+
+            if (scrollDirection < 0 && !nearBottom) {
                 Box(modifier = Modifier
                     .fillMaxWidth()
                     .wrapContentHeight()
@@ -170,15 +177,18 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
 }
 
 @Composable
-fun Sender(sender: String?, modifier: Modifier = Modifier) {
-    sender?.also {
+fun Sender(sender: Long?, viewModel: ChatViewModel, navController: NavController, modifier: Modifier = Modifier) {
+    viewModel.getUser(sender)?.also { user ->
         Box(
             modifier = modifier
                 .padding(start = 10.dp, top = 4.dp, bottom = 4.dp)
         ) {
             Text(
-                sender,
-                style = MaterialTheme.typography.body2
+                user.let { it.firstName + " " + it.lastName },
+                style = MaterialTheme.typography.body2,
+                modifier = Modifier.clickable {
+                    navController.navigate(Screen.Info.buildRoute("user", user.id))
+                }
             )
         }
     }
@@ -193,12 +203,8 @@ fun MessageItem(
     displayDate: Boolean = false
 ) {
 
-    val senderId = message.senderId
-    val name = if (senderId is TdApi.MessageSenderUser) {
-        viewModel.getUser(senderId.userId)?.let { it.firstName + " " + it.lastName }
-    } else null
-
     val chat by viewModel.chatFlow.collectAsState()
+    val senderId = message.senderId
     val isGroupChat =
         (chat.type is TdApi.ChatTypeBasicGroup) || (chat.type is TdApi.ChatTypeSupergroup)
 
@@ -210,7 +216,7 @@ fun MessageItem(
                 && !message.isOutgoing
                 && isGroupChat
             ) {
-                name
+                senderId.userId
             } else null
         } else null
     }
@@ -232,6 +238,8 @@ fun MessageItem(
         Box(modifier = Modifier.fillMaxWidth()) {
             Sender(
                 sender,
+                viewModel,
+                navController,
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .clickable {
