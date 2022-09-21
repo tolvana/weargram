@@ -16,4 +16,12 @@ class ChatMenuViewModel @Inject constructor(
         return chatProvider.getChat(chatId)
     }
 
+    fun deleteChat(chatId: Long) {
+        client.sendUnscopedRequest(TdApi.DeleteChat(chatId))
+    }
+
+    fun leaveChat(chatId: Long) {
+        client.sendUnscopedRequest(TdApi.LeaveChat(chatId))
+    }
+
 }

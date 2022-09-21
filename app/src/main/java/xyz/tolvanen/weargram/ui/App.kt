@@ -14,6 +14,7 @@ import xyz.tolvanen.weargram.ui.chat.ChatScreen
 import xyz.tolvanen.weargram.ui.home.HomeScreen
 import xyz.tolvanen.weargram.ui.info.InfoScreen
 import xyz.tolvanen.weargram.ui.login.LoginScreen
+import xyz.tolvanen.weargram.ui.message.MessageMenuScreen
 import xyz.tolvanen.weargram.ui.util.VideoView
 
 @Composable
@@ -55,8 +56,8 @@ private fun MainNavHost(navController: NavHostController) {
             }
         }
 
-        composable(Screen.MessageMenu.route) {
-            Screen.MessageMenu.getChatId(it)?.also { chatId ->
+        composable(Screen.ChatMenu.route) {
+            Screen.ChatMenu.getChatId(it)?.also { chatId ->
                 ChatMenuScreen(
                     navController = navController,
                     chatId = chatId,
@@ -65,16 +66,28 @@ private fun MainNavHost(navController: NavHostController) {
             }
         }
 
+        composable(Screen.MessageMenu.route) {
+            Screen.MessageMenu.getChatId(it)?.also { chatId ->
+                Screen.MessageMenu.getMessageId(it)?.also { messageId ->
+                    MessageMenuScreen(
+                        navController = navController,
+                        chatId = chatId,
+                        messageId = messageId,
+                        viewModel = hiltViewModel(it)
+                    )
+                }
+            }
+        }
+
         composable(Screen.Info.route) {
             Screen.Info.getType(it)?.also { type ->
-                Screen.Info.getId(it)?.also {id ->
+                Screen.Info.getId(it)?.also { id ->
                     InfoScreen(
                         navController = navController,
                         type = type,
                         id = id,
                         viewModel = hiltViewModel(it)
                     )
-
                 }
             }
         }

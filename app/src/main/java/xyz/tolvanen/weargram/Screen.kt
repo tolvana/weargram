@@ -17,11 +17,19 @@ sealed class Screen(val route: String) {
             entry.arguments?.getString("chatId")?.toLong()
     }
 
-    object MessageMenu : Screen("messageMenu/{chatId}") {
-        fun buildRoute(chatId: Long): String = "messageMenu/${chatId}"
+    object ChatMenu : Screen("chatMenu/{chatId}") {
+        fun buildRoute(chatId: Long): String = "chatMenu/${chatId}"
+        fun getChatId(entry: NavBackStackEntry): Long? =
+            entry.arguments?.getString("chatId")?.toLong()
+    }
+
+    object MessageMenu : Screen("messageMenu/{chatId}/{messageId}") {
+        fun buildRoute(chatId: Long, messageId: Long): String = "messageMenu/$chatId/$messageId"
         fun getChatId(entry: NavBackStackEntry): Long? =
             entry.arguments?.getString("chatId")?.toLong()
 
+        fun getMessageId(entry: NavBackStackEntry): Long? =
+            entry.arguments?.getString("messageId")?.toLong()
     }
 
     object Info : Screen("info/{type}/{id}") {

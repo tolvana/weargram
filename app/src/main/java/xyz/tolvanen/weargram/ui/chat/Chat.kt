@@ -146,7 +146,7 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
 
             val nearBottom by remember {
                 derivedStateOf {
-                    listState.layoutInfo.visibleItemsInfo.map { it.index}.contains(0)
+                    listState.layoutInfo.visibleItemsInfo.map { it.index }.contains(0)
                 }
             }
 
@@ -177,7 +177,12 @@ fun ChatScaffold(navController: NavController, chatId: Long, viewModel: ChatView
 }
 
 @Composable
-fun Sender(sender: Long?, viewModel: ChatViewModel, navController: NavController, modifier: Modifier = Modifier) {
+fun Sender(
+    sender: Long?,
+    viewModel: ChatViewModel,
+    navController: NavController,
+    modifier: Modifier = Modifier
+) {
     viewModel.getUser(sender)?.also { user ->
         Box(
             modifier = modifier
@@ -250,7 +255,10 @@ fun MessageItem(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { Log.d("Box", "was clicked") },
+                .clickable {
+                    navController.navigate(Screen.MessageMenu.buildRoute(chat.id, message.id))
+                    Log.d("Box", "was clicked")
+                },
             contentAlignment = if (message.isOutgoing) Alignment.CenterEnd else Alignment.CenterStart,
 
             ) {
@@ -304,7 +312,7 @@ fun MessageInput(
         }
 
         Button(
-            onClick = { navController.navigate(Screen.MessageMenu.buildRoute(chatId)) },
+            onClick = { navController.navigate(Screen.ChatMenu.buildRoute(chatId)) },
             colors = ButtonDefaults.buttonColors(
                 backgroundColor = MaterialTheme.colors.primaryVariant,
                 contentColor = MaterialTheme.colors.onSurface

@@ -1,74 +1,118 @@
 package xyz.tolvanen.weargram.ui
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Logout
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import androidx.wear.compose.material.*
+import androidx.wear.compose.material.ScalingLazyColumn
+import androidx.wear.compose.material.Text
 import org.drinkless.td.libcore.telegram.TdApi
 import xyz.tolvanen.weargram.R
 import xyz.tolvanen.weargram.Screen
+import xyz.tolvanen.weargram.ui.util.MenuItem
+import xyz.tolvanen.weargram.ui.util.YesNoDialog
 
 @Composable
 fun ChatMenuScreen(chatId: Long, viewModel: ChatMenuViewModel, navController: NavController) {
 
-    ScalingLazyColumn(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        contentPadding = PaddingValues(top = 24.dp, bottom = 0.dp),
+    val chat = viewModel.getChat(chatId)
 
-        ) {
+    val showLeaveDialog = remember { mutableStateOf(false) }
+    val showDeleteDialog = remember { mutableStateOf(false) }
 
-        item {
-            Info(chatId, viewModel, navController)
+    if (showDeleteDialog.value) {
+        YesNoDialog(
+            text = "Delete chat?",
+            onYes = {
+                viewModel.deleteChat(chatId)
+                navController.popBackStack()
+            },
+            onNo = { showDeleteDialog.value = false }
+        )
+    } else if (showLeaveDialog.value) {
+        YesNoDialog(
+            text = "Leave chat?",
+            onYes = {
+                viewModel.leaveChat(chatId)
+                navController.popBackStack()
+            },
+            onNo = { showLeaveDialog.value = false }
+        )
+    } else {
+        ScalingLazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            contentPadding = PaddingValues(top = 24.dp, bottom = 0.dp),
+
+            ) {
+
+            item {
+                Info(chatId, viewModel, navController)
+            }
+
+            item {
+                Text("Send message")
+            }
+
+            item {
+                MenuItem(
+                    title = "Sticker",
+                    iconPainter = painterResource(id = R.drawable.baseline_emoji_emotions_24),
+                    onClick = {}
+                )
+            }
+
+            item {
+                MenuItem(
+                    title = "Location",
+                    iconPainter = painterResource(id = R.drawable.baseline_location_on_24),
+                    onClick = {}
+                )
+            }
+
+            item {
+                MenuItem(
+                    title = "Audio message",
+                    iconPainter = painterResource(id = R.drawable.baseline_mic_24),
+                    onClick = {}
+                )
+            }
+            item {
+                Spacer(modifier = Modifier.height(5.dp))
+            }
+
+            chat?.also {
+                if (it.canBeDeletedForAllUsers) {
+                    item {
+                        MenuItem(
+                            title = "Delete",
+                            imageVector = Icons.Outlined.Delete,
+                            onClick = { /* viewModel.deleteChat(it) */ }
+                        )
+                    }
+                }
+
+                item {
+                    MenuItem(
+                        title = "Leave",
+                        imageVector = Icons.Outlined.Logout,
+                        onClick = { /* viewModel.leaveChat(it) */ }
+                    )
+                }
+
+            }
         }
 
-        item {
-            Text("Send message")
-        }
-
-        item {
-            MessageMenuItem(
-                title = "Sticker",
-                iconPainter = painterResource(id = R.drawable.baseline_emoji_emotions_24),
-                onClick = {}
-            )
-        }
-
-        item {
-            MessageMenuItem(
-                title = "Location",
-                iconPainter = painterResource(id = R.drawable.baseline_location_on_24),
-                onClick = {}
-            )
-        }
-
-        item {
-            MessageMenuItem(
-                title = "Audio message",
-                iconPainter = painterResource(id = R.drawable.baseline_mic_24),
-                onClick = {}
-            )
-        }
     }
-}
-
-@Composable
-fun MessageMenuItem(title: String, iconPainter: Painter, onClick: () -> Unit) {
-    Chip(
-        modifier = Modifier.fillMaxWidth(0.9f),
-        onClick = onClick,
-        label = { Text(title) },
-        icon = { Icon(painter = iconPainter, contentDescription = title) },
-        colors = ChipDefaults.chipColors(backgroundColor = MaterialTheme.colors.surface)
-    )
 
 }
 
@@ -89,7 +133,7 @@ fun Info(chatId: Long, viewModel: ChatMenuViewModel, navController: NavControlle
 
 @Composable
 fun UserInfo(userId: Long, navController: NavController) {
-    MessageMenuItem(
+    MenuItem(
         title = "User Info",
         iconPainter = painterResource(id = R.drawable.baseline_info_24),
         onClick = { navController.navigate(Screen.Info.buildRoute("user", userId)) }
@@ -98,7 +142,7 @@ fun UserInfo(userId: Long, navController: NavController) {
 
 @Composable
 fun GroupInfo(groupId: Long, navController: NavController) {
-    MessageMenuItem(
+    MenuItem(
         title = "Group Info",
         iconPainter = painterResource(id = R.drawable.baseline_info_24),
         onClick = { navController.navigate(Screen.Info.buildRoute("group", groupId)) }
@@ -107,7 +151,7 @@ fun GroupInfo(groupId: Long, navController: NavController) {
 
 @Composable
 fun ChannelInfo(channelId: Long, navController: NavController) {
-    MessageMenuItem(
+    MenuItem(
         title = "Channel Info",
         iconPainter = painterResource(id = R.drawable.baseline_info_24),
         onClick = { navController.navigate(Screen.Info.buildRoute("channel", channelId)) }
