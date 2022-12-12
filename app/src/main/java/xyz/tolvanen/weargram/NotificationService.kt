@@ -5,9 +5,12 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.BitmapFactory
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
+import androidx.core.app.NotificationCompat
+import androidx.core.graphics.BitmapCompat
 import dagger.hilt.android.AndroidEntryPoint
 import org.drinkless.td.libcore.telegram.TdApi
 import xyz.tolvanen.weargram.client.NotificationProvider
@@ -81,10 +84,18 @@ class NotificationService : Service() {
         )
 
         val notification: Notification =
-            Notification.Builder(this, FOREGROUND_NOTIFICATION_CHANNEL_ID)
+            NotificationCompat.Builder(this, FOREGROUND_NOTIFICATION_CHANNEL_ID)
+                .setBadgeIconType(R.drawable.ic_notification)
                 .setContentTitle("Weargram")
                 .setContentText("Weargram is running")
+                .setSmallIcon(R.drawable.ic_notification)
+                .setLargeIcon(BitmapFactory.decodeResource(resources, R.drawable.ic_launcher_foreground))
                 .setContentIntent(pendingIntent)
+                .addAction(
+                    R.drawable.baseline_play_arrow_24,
+                    "Open",
+                    PendingIntent.getActivity(applicationContext, 0, Intent(this, MainActivity::class.java), 0)
+                )
                 .build()
 
         startForeground(FOREGROUND_NOTIFICATION_ID, notification)
