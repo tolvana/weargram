@@ -22,8 +22,8 @@ object WeargramModule {
     fun provideTdlibParameters(@ApplicationContext context: Context): TdApi.TdlibParameters {
         return TdApi.TdlibParameters().apply {
             // Obtain application identifier hash for Telegram API access at https://my.telegram.org
-            apiId = 94575
-            apiHash = "a3406de8d171bb422bb6ddf3bbd800e2"
+            apiId = context.resources.getInteger(R.integer.api_id)
+            apiHash = context.getString(R.string.api_hash)
             useMessageDatabase = true
             useSecretChats = true
             systemLanguageCode = Locale.getDefault().language

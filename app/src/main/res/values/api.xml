@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- These are the API credentials from tdlib example. -->
+    <integer name="api_id">94575</integer>
+    <string name="api_hash">a3406de8d171bb422bb6ddf3bbd800e2</string>
+</resources>
