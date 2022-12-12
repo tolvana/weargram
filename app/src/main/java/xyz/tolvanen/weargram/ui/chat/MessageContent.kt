@@ -7,7 +7,9 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.CountDownTimer
 import android.util.Log
+import android.view.MotionEvent
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.runtime.Composable
@@ -77,7 +79,7 @@ fun MessageContent(
             message, content, viewModel, modifier
         )
         is TdApi.MessageLocation -> LocationMessage(
-            message, content, viewModel, modifier
+            message, content, viewModel, navController, modifier
         )
         is TdApi.MessageAnimatedEmoji -> AnimatedEmojiMessage(
             message, content, viewModel, modifier
@@ -128,10 +130,11 @@ fun MessageCard(
     message: TdApi.Message,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = CardDefaults.ContentPadding,
-    content: @Composable (ColumnScope.() -> Unit)
+    onClick: () -> Unit = {},
+    content: @Composable (ColumnScope.() -> Unit),
 ) {
     Card(
-        onClick = { Log.d("Card", "was clicked") },
+        onClick = onClick,
         contentPadding = contentPadding,
         backgroundPainter = ColorPainter(
             if (message.isOutgoing) MaterialTheme.colors.primaryVariant else MaterialTheme.colors.surface
@@ -733,6 +736,7 @@ fun LocationMessage(
     message: TdApi.Message,
     content: TdApi.MessageLocation,
     viewModel: ChatViewModel,
+    navController: NavController,
     modifier: Modifier = Modifier,
 ) {
 
@@ -748,8 +752,19 @@ fun LocationMessage(
                 marker.icon = ContextCompat.getDrawable(context, R.drawable.baseline_location_on_24)
                 it.zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
                 it.overlays.add(marker)
-                it.setOnTouchListener { v, _ ->
-                    v.performClick()
+                it.setOnClickListener {
+                    Log.d("LocationMessage", "${content.location.latitude}, ${content.location.longitude}")
+                    navController.navigate(
+                        Screen.Map.buildRoute(
+                            content.location.latitude,
+                            content.location.longitude
+                        )
+                    )
+                }
+                it.setOnTouchListener { v, e ->
+                    when (e.action) {
+                        MotionEvent.ACTION_UP -> v.performClick()
+                    }
                     true
                 }
                 it.controller.animateTo(position, 15.0, 0)
@@ -757,6 +772,7 @@ fun LocationMessage(
             }, modifier = Modifier
                 .defaultMinSize(minHeight = 120.dp)
                 .fillMaxSize()
+                .clickable { Log.d("MapView", "click") }
         )
     }
 }

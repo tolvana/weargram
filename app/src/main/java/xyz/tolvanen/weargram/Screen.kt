@@ -52,5 +52,17 @@ sealed class Screen(val route: String) {
         )
 
     }
+
+    object Map : Screen("map/{latitude}/{longitude}") {
+        fun buildRoute(latitude: Double, longitude: Double): String =
+            "map/$latitude/$longitude"
+
+        fun getCoordinates(entry: NavBackStackEntry): Pair<Double, Double> =
+            Pair(
+                entry.arguments?.getString("latitude")?.toDouble() ?: 0.0,
+                entry.arguments?.getString("longitude")?.toDouble() ?: 0.0
+            )
+
+    }
     //object CreateChat : Screen("createChat")
 }
